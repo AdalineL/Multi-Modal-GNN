@@ -2,7 +2,7 @@
 
 ## 📋 Project Overview
 
-This project implements a **Graph Neural Network (GNN) approach** to predict and impute missing laboratory test results in Electronic Health Records (EHRs). By modeling patients, lab tests, diagnoses, and medications as a heterogeneous graph with **learnable embeddings** and **degree-aware prediction**, the system achieves **R² = 0.242** (7x better than baseline) on the eICU ICU database.
+This project implements a **Graph Neural Network (GNN) approach** to predict and impute missing laboratory test results in Electronic Health Records (EHRs). By modeling patients, lab tests, diagnoses, and medications as a heterogeneous graph with **learnable embeddings** and **degree-aware prediction**, the system achieves **R² = 0.242** (7x improvement over baseline) on the eICU ICU database.
 
 **Key Innovation**: Instead of handcrafted features, we use pure ID-based embeddings that learn clinical relationships from data. The model discovers that CBC labs cluster together, metabolic panels form distinct groups, and similar patients share embedding space—all without explicit supervision.
 
@@ -29,19 +29,19 @@ Traditional imputation methods (mean filling, regression) treat features indepen
 
 ## 🏆 Key Achievements
 
-This project achieves **state-of-the-art performance** on lab value imputation through systematic experimentation:
+This project achieves **impressive results** on lab value imputation through systematic experimentation:
 
-### 🚀 Breakthrough Performance
+### 🚀 Performance Results
 
 **Overall Results (Iteration 7 - Degree-Aware Hybrid)**:
-- **R² = 0.242** (7x better than baseline!)
+- **R² = 0.242** (7x improvement over baseline)
 - **MAE = 0.609** (4.1% improvement)
 - **RMSE = 0.889** (11.6% improvement)
 
 **Impact by Patient Group**:
-- **Rare Labs**: R² improved from -0.018 → **0.400** (+2111%!)
+- **Rare Labs**: R² improved from -0.018 → **0.400** (significant improvement)
 - **Medium-Connectivity Patients**: R² improved from 0.061 → **0.215** (+254%)
-- **All Categories Improved**: No performance trade-offs!
+- **All Categories Improved**: No performance trade-offs
 
 ### 💡 Technical Innovations
 
@@ -399,9 +399,9 @@ prediction = model(patient_vector, lab_vector, graph_context)
 - **Better generalization**: No overfitting to handcrafted features
 
 **Evidence from Experiments**:
-- Iteration 3 (Full Features): R² = 0.007 (73% worse than baseline!)
+- Iteration 3 (Full Features): R² = 0.007 (73% worse than baseline)
 - Iteration 2 (Pure Learnable): R² = 0.029 (baseline)
-- **Iteration 7 (Pure Learnable + Architecture)**: R² = 0.242 (7x better!)
+- **Iteration 7 (Pure Learnable + Architecture)**: R² = 0.242 (7x improvement)
 
 ### How Learnable Embeddings Work
 
@@ -588,7 +588,7 @@ def winsorize_residuals(predictions, targets, lab_indices):
 | **4** | Hybrid (APACHE only) | 0.649 | 0.018 | Features still add noise |
 | **5** | Deeper patient MLP + APACHE | 0.640 | 0.024 | Architecture helps but features hurt |
 | **6** | Deeper MLP + pure learnable | **0.635** | **0.034** | **Best of both worlds!** |
-| **7** | **Degree-aware + reweighting** | **0.609** | **0.242** | **BREAKTHROUGH! 🚀** |
+| **7** | **Degree-aware + reweighting** | **0.609** | **0.242** | **Best results** |
 
 ### Lessons Learned
 
@@ -777,5 +777,3 @@ MIT License. See `LICENSE` file.
 ---
 
 **Happy Graph Learning! 🧠📊🏥**
-
-**Breakthrough Achievement**: R² = 0.242 (7x better than baseline!) 🚀

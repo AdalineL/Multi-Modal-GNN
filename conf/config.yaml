@@ -1,0 +1,366 @@
+# ========================================================================
+# EHR Graph Imputation Configuration
+# ========================================================================
+# This configuration file controls all aspects of the pipeline:
+# - Cohort selection and filtering
+# - Feature engineering for labs, diagnoses, and medications
+# - Graph construction parameters
+# - Model architecture and training hyperparameters
+#
+# By modifying this file alone, you can easily scale from MIMIC-III demo
+# (hundreds of patients) to the full dataset (tens of thousands).
+# ========================================================================
+
+# ------------------------------------------------------------------------
+# Data Paths
+# ------------------------------------------------------------------------
+data:
+  # Dataset type: "mimic3" or "eicu"
+  # Rationale: Different datasets have different schemas and require different loaders
+  dataset: "eicu"  # Changed from MIMIC-III to eICU
+
+  # Path to raw data CSV files or database exports
+  # For MIMIC-III: path to MIMIC-III CSV files
+  # For eICU: path to eICU .csv.gz files
+  raw_dir: "/Users/jireh/Desktop/Graph-theory-project/eicu-collaborative-research-database-demo-2.0.1"
+
+  # Path for intermediate processed files (parquet format)
+  interim_dir: "../data/interim"
+
+  # Output directory for final graph and model artifacts
+  output_dir: "../outputs"
+
+# ------------------------------------------------------------------------
+# Cohort Selection
+# ------------------------------------------------------------------------
+cohort:
+  # Minimum age for patient inclusion (in years)
+  # Rationale: Focus on adult patients for clinical relevance
+  age_min: 18
+
+  # Maximum age for patient inclusion (null = no limit)
+  # Rationale: Can exclude very elderly if desired for specific analysis
+  age_max: null
+
+  # Use only the first ICU stay per patient
+  # Rationale: Reduces data leakage and ensures independence between samples
+  use_first_icu_only: true
+
+  # Limit number of subjects for development/testing
+  # Set to null for full dataset
+  # Rationale: Use small subset for quick iteration, then scale up
+  subject_limit: null  # Using full eICU dataset (~1,834 unique patients)
+
+  # Minimum length of ICU stay in hours (null = no limit)
+  # Rationale: Very short stays may have incomplete data
+  min_los_hours: null
+
+  # Exclude patients who died in hospital (if true)
+  # Rationale: Depends on research question; set false to include all
+  exclude_deaths: false
+
+# ------------------------------------------------------------------------
+# Feature Engineering: Lab Tests
+# ------------------------------------------------------------------------
+feature_space:
+  labs:
+    # Number of most frequent lab tests to include
+    # Rationale: Focus on clinically relevant, commonly ordered tests
+    # Demo: 20-30, Full: 50-100
+    top_k: 50
+
+    # Aggregation method when multiple values exist per patient-lab pair
+    # Options: "last", "mean", "median", "min", "max"
+    # Rationale: "last" captures most recent clinical state
+    aggregate: "last"
+
+    # Normalization strategy
+    # Options: "zscore", "minmax", "robust", "none"
+    # Rationale: Z-score normalizes across different lab scales (glucose vs WBC)
+    normalize: "zscore"
+
+    # Remove outliers beyond N standard deviations (null = no removal)
+    # Rationale: Extreme outliers may be data entry errors
+    outlier_std_threshold: 5.0
+
+    # Minimum number of patients that must have this lab test
+    # Rationale: Ensures statistical reliability
+    min_patient_count: 10
+
+  # ----------------------------------------------------------------------
+  # Feature Engineering: Diagnoses
+  # ----------------------------------------------------------------------
+  diagnoses:
+    # Collapse ICD-9 codes to 3-digit categories
+    # Rationale: Reduces sparsity while maintaining clinical meaning
+    # Example: 428.0, 428.1, 428.9 → 428 (heart failure)
+    collapse_to_3digit: true
+
+    # Number of most frequent diagnosis codes to include
+    # Rationale: Focus on common conditions, reduce graph sparsity
+    top_k: 200
+
+    # Minimum number of patients with this diagnosis
+    min_patient_count: 5
+
+  # ----------------------------------------------------------------------
+  # Feature Engineering: Medications
+  # ----------------------------------------------------------------------
+  medications:
+    # Number of most frequent medications to include
+    # Rationale: Common medications provide strongest signal
+    top_k: 100
+
+    # Normalize drug names to generic forms
+    # Rationale: Consolidates brand/generic variations
+    normalize_names: true
+
+    # Minimum number of patients prescribed this medication
+    min_patient_count: 5
+
+  # ----------------------------------------------------------------------
+  # Feature Engineering: Demographics
+  # ----------------------------------------------------------------------
+  demographics:
+    # Include age as continuous feature
+    include_age: true
+
+    # Include gender as one-hot feature
+    include_gender: true
+
+    # Include ethnicity as one-hot feature
+    include_ethnicity: false  # Often incomplete in MIMIC
+
+# ------------------------------------------------------------------------
+# Graph Construction
+# ------------------------------------------------------------------------
+graph:
+  # Node types to include in heterogeneous graph
+  # All four create rich relational structure
+  node_types:
+    - "patient"
+    - "lab"
+    - "diagnosis"
+    - "medication"
+
+  # Edge types and their semantics
+  edge_types:
+    # Patient-Lab: continuous edge attribute (normalized lab value)
+    patient_lab:
+      enabled: true
+      bidirectional: true  # Allow message passing both directions
+
+    # Patient-Diagnosis: binary edge (has diagnosis)
+    patient_diagnosis:
+      enabled: true
+      bidirectional: true
+
+    # Patient-Medication: binary edge (prescribed medication)
+    patient_medication:
+      enabled: true
+      bidirectional: true
+
+  # Add self-loops to all node types
+  # Rationale: Helps preserve node's own features during aggregation
+  add_self_loops: true
+
+# ------------------------------------------------------------------------
+# Model Architecture
+# ------------------------------------------------------------------------
+model:
+  # GNN backbone architecture
+  # Options: "RGCN" (Relational GCN), "HeteroGNN", "HGT" (Heterogeneous Graph Transformer)
+  # Rationale: RGCN handles multiple edge types efficiently
+  architecture: "RGCN"
+
+  # Hidden dimension for node embeddings
+  # Rationale: 128 balances expressiveness and memory/computation
+  hidden_dim: 128
+
+  # Number of GNN layers
+  # Rationale: 2-3 layers capture local context without over-smoothing
+  num_layers: 2
+
+  # Dropout rate for regularization
+  # Rationale: 0.2 prevents overfitting on small cohorts
+  dropout: 0.2
+
+  # Activation function
+  # Options: "relu", "elu", "leaky_relu"
+  activation: "relu"
+
+  # Use batch normalization
+  # Rationale: Stabilizes training with heterogeneous data
+  use_batch_norm: true
+
+  # Aggregation function for message passing
+  # Options: "mean", "sum", "max"
+  # Rationale: Mean aggregation is scale-invariant
+  aggregation: "mean"
+
+  # Edge regression head architecture
+  edge_head:
+    # MLP layers for predicting lab values from [h_patient; h_lab]
+    # Rationale: Two layers provide non-linear mapping
+    hidden_dims: [64, 32]
+
+    # Final activation (null for regression)
+    final_activation: null
+
+# ------------------------------------------------------------------------
+# Training Configuration
+# ------------------------------------------------------------------------
+train:
+  # Primary task
+  # Options: "edge_regression" (predict lab values), "link_prediction" (predict lab presence)
+  # Rationale: Regression imputes actual values, more clinically useful
+  task: "edge_regression"
+
+  # Fraction of observed patient-lab edges to mask during training
+  # Rationale: 0.2 provides sufficient supervision while testing imputation
+  mask_fraction: 0.2
+
+  # Train/validation/test split ratios
+  # Rationale: Standard splits for reproducible evaluation
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+
+  # Loss function
+  # Options: "mae" (Mean Absolute Error), "mse" (Mean Squared Error), "huber"
+  # Rationale: MAE is robust to outliers in lab values
+  loss: "mae"
+
+  # Number of training epochs
+  # Rationale: Enough for convergence on small/medium datasets
+  epochs: 100
+
+  # Batch size (null = full-batch)
+  # Rationale: Full-batch for small graphs, mini-batch for large graphs
+  batch_size: null
+
+  # Early stopping patience (epochs without improvement)
+  # Rationale: Prevents overfitting, saves compute
+  early_stopping_patience: 15
+
+  # Optimizer configuration
+  optimizer:
+    type: "adam"
+    lr: 0.001  # Learning rate
+    weight_decay: 0.00001  # L2 regularization
+
+  # Learning rate scheduler
+  lr_scheduler:
+    enabled: true
+    type: "reduce_on_plateau"
+    factor: 0.5
+    patience: 10
+
+  # Random seed for reproducibility
+  seed: 42
+
+  # Device
+  # Options: "cuda", "mps", "cpu"
+  # Rationale: Use GPU if available for faster training
+  device: "auto"  # auto-detect best available
+
+# ------------------------------------------------------------------------
+# Evaluation Metrics
+# ------------------------------------------------------------------------
+evaluation:
+  # Primary metrics for edge regression
+  regression_metrics:
+    - "mae"   # Mean Absolute Error
+    - "rmse"  # Root Mean Squared Error
+    - "r2"    # R-squared coefficient
+    - "mape"  # Mean Absolute Percentage Error (for non-zero values)
+
+  # Compute per-lab metrics in addition to global
+  # Rationale: Identifies which lab types are harder to predict
+  per_lab_metrics: true
+
+  # Baseline comparisons
+  baselines:
+    - "global_mean"   # Predict overall mean lab value
+    - "per_lab_mean"  # Predict mean for each lab type
+    - "nearest_neighbor"  # Predict from most similar patient
+
+  # Stratify metrics by patient characteristics
+  stratify_by:
+    - "age_group"  # <40, 40-60, 60-80, >80
+    - "num_labs"   # Number of observed labs per patient
+    - "lab_frequency"  # Common vs rare lab tests
+
+# ------------------------------------------------------------------------
+# Visualization
+# ------------------------------------------------------------------------
+visualization:
+  # Generate embedding visualizations (UMAP/t-SNE)
+  # Rationale: Understand learned representations
+  generate_embeddings: true
+
+  # Dimensionality reduction method
+  # Options: "umap", "tsne", "pca"
+  dim_reduction: "umap"
+
+  # Color embeddings by metadata
+  embedding_color_by:
+    - "node_type"
+    - "age_group"
+    - "num_connections"
+
+  # Generate parity plots (true vs predicted)
+  generate_parity_plots: true
+
+  # Number of top labs to show in detailed plots
+  top_labs_to_plot: 10
+
+  # Generate patient-centered subgraph visualizations
+  generate_subgraphs: true
+  num_example_subgraphs: 5  # Number of patient examples
+
+  # Plot missingness heatmap
+  missingness_heatmap: true
+
+  # Graph statistics plots
+  plot_degree_distribution: true
+  plot_edge_weight_distribution: true
+
+# ------------------------------------------------------------------------
+# Logging and Experiment Tracking
+# ------------------------------------------------------------------------
+logging:
+  # Log level
+  # Options: "DEBUG", "INFO", "WARNING", "ERROR"
+  level: "INFO"
+
+  # Save logs to file
+  save_to_file: true
+  log_file: "outputs/training.log"
+
+  # Use Weights & Biases for experiment tracking
+  use_wandb: false
+  wandb_project: "ehr-graph-impute"
+  wandb_entity: null  # Your W&B username
+
+  # Frequency of logging (epochs)
+  log_interval: 1
+
+  # Save model checkpoints
+  save_checkpoints: true
+  checkpoint_interval: 10  # Save every N epochs
+
+# ------------------------------------------------------------------------
+# Reproducibility
+# ------------------------------------------------------------------------
+reproducibility:
+  # Set random seeds for all libraries
+  set_seeds: true
+
+  # Seeds for different libraries
+  numpy_seed: 42
+  torch_seed: 42
+  random_seed: 42
+
+  # Use deterministic algorithms (may reduce performance)
+  deterministic: false

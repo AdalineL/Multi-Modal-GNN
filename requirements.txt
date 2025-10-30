@@ -1,0 +1,123 @@
+# ============================================================================
+# EHR Graph Imputation - Python Dependencies
+# ============================================================================
+# This file lists all required Python packages.
+# Install with: pip install -r requirements.txt
+#
+# Recommended: Use Python 3.8+ and create a virtual environment first
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Core Deep Learning
+# ----------------------------------------------------------------------------
+torch>=2.0.0                    # PyTorch for neural networks
+                                # GPU support: install pytorch with CUDA from pytorch.org
+
+# ----------------------------------------------------------------------------
+# Graph Neural Networks
+# ----------------------------------------------------------------------------
+torch-geometric>=2.3.0          # PyTorch Geometric for GNNs
+torch-scatter>=2.1.0            # Scatter operations for message passing
+torch-sparse>=0.6.16            # Sparse tensor operations
+torch-cluster>=1.6.0            # Graph clustering algorithms
+
+# Note: If installation fails, try:
+# pip install torch-geometric torch-scatter torch-sparse torch-cluster -f https://data.pyg.org/whl/torch-2.0.0+cpu.html
+# (Replace cpu with cu117, cu118, etc. for GPU versions)
+
+# ----------------------------------------------------------------------------
+# Data Processing
+# ----------------------------------------------------------------------------
+pandas>=1.5.0                   # DataFrame operations
+numpy>=1.23.0                   # Numerical computing
+pyarrow>=10.0.0                 # Fast parquet file I/O
+scikit-learn>=1.2.0             # Metrics and preprocessing utilities
+
+# ----------------------------------------------------------------------------
+# Visualization
+# ----------------------------------------------------------------------------
+matplotlib>=3.6.0               # Plotting
+seaborn>=0.12.0                 # Statistical visualizations
+plotly>=5.11.0                  # Interactive plots (optional)
+
+# ----------------------------------------------------------------------------
+# Dimensionality Reduction (for embedding visualization)
+# ----------------------------------------------------------------------------
+umap-learn>=0.5.3               # UMAP for embedding projection
+                                # Also installs: numba, pynndescent
+
+# ----------------------------------------------------------------------------
+# Configuration Management
+# ----------------------------------------------------------------------------
+pyyaml>=6.0                     # YAML config file parsing
+
+# ----------------------------------------------------------------------------
+# Progress Bars and Logging
+# ----------------------------------------------------------------------------
+tqdm>=4.64.0                    # Progress bars for loops
+
+# ----------------------------------------------------------------------------
+# Database Support (Optional - for PostgreSQL MIMIC-III)
+# ----------------------------------------------------------------------------
+# Uncomment if using PostgreSQL instead of CSV files
+# psycopg2-binary>=2.9.5        # PostgreSQL adapter
+# sqlalchemy>=1.4.0             # SQL toolkit and ORM
+
+# ----------------------------------------------------------------------------
+# Experiment Tracking (Optional)
+# ----------------------------------------------------------------------------
+# Uncomment if using Weights & Biases for experiment tracking
+# wandb>=0.13.0                 # Weights & Biases integration
+
+# ----------------------------------------------------------------------------
+# Jupyter Notebook Support (Optional - for EDA)
+# ----------------------------------------------------------------------------
+# Uncomment if using notebooks
+# jupyter>=1.0.0
+# ipykernel>=6.19.0
+# ipywidgets>=8.0.0
+
+# ----------------------------------------------------------------------------
+# Testing and Development (Optional)
+# ----------------------------------------------------------------------------
+# pytest>=7.2.0                 # Testing framework
+# black>=22.10.0                # Code formatter
+# flake8>=6.0.0                 # Linting
+# mypy>=0.991                   # Type checking
+
+# ----------------------------------------------------------------------------
+# Additional Utilities
+# ----------------------------------------------------------------------------
+scipy>=1.9.0                    # Scientific computing (for Q-Q plots, etc.)
+
+# ============================================================================
+# Installation Notes
+# ============================================================================
+#
+# 1. PyTorch Geometric Installation:
+#    The torch-geometric ecosystem can be tricky to install.
+#    If you encounter issues, visit:
+#    https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
+#
+# 2. CUDA Support:
+#    For GPU training, install PyTorch with CUDA support first:
+#    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+#    Then install torch-geometric with matching CUDA version
+#
+# 3. Apple Silicon (M1/M2):
+#    PyTorch supports MPS backend for GPU acceleration.
+#    Installation is straightforward with pip.
+#
+# 4. Minimal Installation:
+#    If you only want core functionality without visualizations:
+#    pip install torch torch-geometric pandas numpy scikit-learn pyyaml
+#
+# ============================================================================
+# Version Compatibility
+# ============================================================================
+# Tested with:
+# - Python 3.9, 3.10, 3.11
+# - PyTorch 2.0.0, 2.0.1, 2.1.0
+# - PyTorch Geometric 2.3.0, 2.3.1, 2.4.0
+# - CUDA 11.7, 11.8, 12.1 (for GPU)
+# ============================================================================

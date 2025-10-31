@@ -1,0 +1,1319 @@
+[
+  {
+    "patient": {
+      "patient_id": 3128596,
+      "age": 47.0,
+      "gender": "Male",
+      "diagnoses": [],
+      "medications": [
+        "propofol",
+        "nan"
+      ]
+    },
+    "predictions": {
+      "measured_labs": {
+        "BUN": {
+          "value": 16.000000093514537,
+          "normalized": -0.3705674409866333
+        },
+        "CPK": {
+          "value": 353.9999982474054,
+          "normalized": -0.06177503243088722
+        },
+        "TSH": {
+          "value": 3.8300000495292075,
+          "normalized": 0.31574928760528564
+        },
+        "bicarbonate": {
+          "value": 25.00000002831486,
+          "normalized": -0.23752529919147491
+        },
+        "creatinine": {
+          "value": 1.139999996543862,
+          "normalized": -0.0760670006275177
+        },
+        "glucose": {
+          "value": 119.00000023890429,
+          "normalized": -0.202959343791008
+        },
+        "magnesium": {
+          "value": 2.0999999982117243,
+          "normalized": 0.45945167541503906
+        },
+        "potassium": {
+          "value": 4.000000000064708,
+          "normalized": -0.03343546390533447
+        },
+        "sodium": {
+          "value": 137.9999999924946,
+          "normalized": -0.11413328349590302
+        }
+      },
+      "masked_labs": {
+        "CPK-MB": {
+          "predicted": 4.737471277021462,
+          "actual": 6.0999998461465506,
+          "error": 1.3625285691250886,
+          "normalized_predicted": -0.20257152616977692,
+          "normalized_actual": -0.16454723477363586
+        },
+        "calcium": {
+          "predicted": 8.59094960382692,
+          "actual": 9.400000020411786,
+          "error": 0.8090504165848671,
+          "normalized_predicted": 0.1196303516626358,
+          "normalized_actual": 1.273650050163269
+        },
+        "chloride": {
+          "predicted": 103.34356700958202,
+          "actual": 104.99999992385743,
+          "error": 1.6564329142754133,
+          "normalized_predicted": -0.02585500478744507,
+          "normalized_actual": 0.2662452459335327
+        }
+      },
+      "truly_missing_labs": {
+        "paCO2": {
+          "predicted": 39.85104152599398,
+          "normalized_predicted": -0.09533031284809113,
+          "note": "Lab was never measured for this patient"
+        },
+        "-basos": {
+          "predicted": 0.19302964198878977,
+          "normalized_predicted": -0.3239935636520386,
+          "note": "Lab was never measured for this patient"
+        },
+        "anion gap": {
+          "predicted": 9.990129516809594,
+          "normalized_predicted": -0.06151697784662247,
+          "note": "Lab was never measured for this patient"
+        },
+        "Hgb": {
+          "predicted": 11.670363537214742,
+          "normalized_predicted": 0.21024967730045319,
+          "note": "Lab was never measured for this patient"
+        },
+        "paO2": {
+          "predicted": 90.39797033251233,
+          "normalized_predicted": -0.27351611852645874,
+          "note": "Lab was never measured for this patient"
+        },
+        "albumin": {
+          "predicted": 3.163308561461636,
+          "normalized_predicted": 0.18450818955898285,
+          "note": "Lab was never measured for this patient"
+        },
+        "WBC x 1000": {
+          "predicted": 9.06173889165618,
+          "normalized_predicted": -0.1866620033979416,
+          "note": "Lab was never measured for this patient"
+        },
+        "phosphate": {
+          "predicted": 3.1682696866485895,
+          "normalized_predicted": -0.1668258011341095,
+          "note": "Lab was never measured for this patient"
+        },
+        "total protein": {
+          "predicted": 6.408751650226361,
+          "normalized_predicted": 0.16077829897403717,
+          "note": "Lab was never measured for this patient"
+        },
+        "O2 Sat (%)": {
+          "predicted": 96.13769187420269,
+          "normalized_predicted": 0.14485050737857819,
+          "note": "Lab was never measured for this patient"
+        },
+        "HCO3": {
+          "predicted": 24.917888027645194,
+          "normalized_predicted": 0.12614406645298004,
+          "note": "Lab was never measured for this patient"
+        },
+        "-monos": {
+          "predicted": 8.055166757154732,
+          "normalized_predicted": -0.020649828016757965,
+          "note": "Lab was never measured for this patient"
+        },
+        "PTT": {
+          "predicted": 31.996287229491397,
+          "normalized_predicted": -0.26214659214019775,
+          "note": "Lab was never measured for this patient"
+        },
+        "RBC": {
+          "predicted": 3.927125497423878,
+          "normalized_predicted": 0.222758486866951,
+          "note": "Lab was never measured for this patient"
+        },
+        "FiO2": {
+          "predicted": 29.33446982507014,
+          "normalized_predicted": -0.1192193403840065,
+          "note": "Lab was never measured for this patient"
+        },
+        "bedside glucose": {
+          "predicted": 131.83477302315274,
+          "normalized_predicted": -0.20746397972106934,
+          "note": "Lab was never measured for this patient"
+        },
+        "triglycerides": {
+          "predicted": 123.0568679523099,
+          "normalized_predicted": -0.21924090385437012,
+          "note": "Lab was never measured for this patient"
+        },
+        "RDW": {
+          "predicted": 14.514432529895338,
+          "normalized_predicted": -0.24960598349571228,
+          "note": "Lab was never measured for this patient"
+        },
+        "MCV": {
+          "predicted": 90.85586826641024,
+          "normalized_predicted": 0.025778040289878845,
+          "note": "Lab was never measured for this patient"
+        },
+        "PT - INR": {
+          "predicted": 1.176981503277122,
+          "normalized_predicted": -0.2965870499610901,
+          "note": "Lab was never measured for this patient"
+        },
+        "platelets x 1000": {
+          "predicted": 212.2271305158256,
+          "normalized_predicted": -0.11561215668916702,
+          "note": "Lab was never measured for this patient"
+        },
+        "pH": {
+          "predicted": 7.394554093299452,
+          "normalized_predicted": 0.16073815524578094,
+          "note": "Lab was never measured for this patient"
+        },
+        "MCHC": {
+          "predicted": 32.96670992642576,
+          "normalized_predicted": -0.019322380423545837,
+          "note": "Lab was never measured for this patient"
+        },
+        "-polys": {
+          "predicted": 74.1580321223801,
+          "normalized_predicted": 0.23984797298908234,
+          "note": "Lab was never measured for this patient"
+        },
+        "Base Excess": {
+          "predicted": 1.1322750121525171,
+          "normalized_predicted": 0.1850629597902298,
+          "note": "Lab was never measured for this patient"
+        },
+        "Hct": {
+          "predicted": 34.913177827429216,
+          "normalized_predicted": 0.14359061419963837,
+          "note": "Lab was never measured for this patient"
+        },
+        "PT": {
+          "predicted": 14.308526837625065,
+          "normalized_predicted": -0.2214047610759735,
+          "note": "Lab was never measured for this patient"
+        },
+        "alkaline phos.": {
+          "predicted": 80.188456488554,
+          "normalized_predicted": -0.2462344467639923,
+          "note": "Lab was never measured for this patient"
+        },
+        "lactate": {
+          "predicted": 1.6261548909580625,
+          "normalized_predicted": -0.23583099246025085,
+          "note": "Lab was never measured for this patient"
+        },
+        "MPV": {
+          "predicted": 9.741721339011697,
+          "normalized_predicted": 0.025432303547859192,
+          "note": "Lab was never measured for this patient"
+        },
+        "ALT (SGPT)": {
+          "predicted": 29.3588580863671,
+          "normalized_predicted": -0.18717889487743378,
+          "note": "Lab was never measured for this patient"
+        },
+        "-eos": {
+          "predicted": 1.4701967630374848,
+          "normalized_predicted": -0.22668717801570892,
+          "note": "Lab was never measured for this patient"
+        },
+        "total bilirubin": {
+          "predicted": 0.564975024859435,
+          "normalized_predicted": -0.22409310936927795,
+          "note": "Lab was never measured for this patient"
+        },
+        "urinary specific gravity": {
+          "predicted": 1.0158159277850658,
+          "normalized_predicted": -0.10406002402305603,
+          "note": "Lab was never measured for this patient"
+        },
+        "AST (SGOT)": {
+          "predicted": 26.840877462300007,
+          "normalized_predicted": -0.17508193850517273,
+          "note": "Lab was never measured for this patient"
+        },
+        "-lymphs": {
+          "predicted": 14.619630536964321,
+          "normalized_predicted": -0.21127796173095703,
+          "note": "Lab was never measured for this patient"
+        },
+        "MCH": {
+          "predicted": 30.01450486523318,
+          "normalized_predicted": 0.03088177740573883,
+          "note": "Lab was never measured for this patient"
+        },
+        "troponin - I": {
+          "predicted": 0.23608065786473253,
+          "normalized_predicted": -0.2541245222091675,
+          "note": "Lab was never measured for this patient"
+        }
+      }
+    }
+  },
+  {
+    "patient": {
+      "patient_id": 2820137,
+      "age": 67.0,
+      "gender": "Male",
+      "diagnoses": [
+        "427"
+      ],
+      "medications": []
+    },
+    "predictions": {
+      "measured_labs": {
+        "-basos": {
+          "value": 2.79333584041197e-09,
+          "normalized": -0.776413083076477
+        },
+        "-eos": {
+          "value": 1.000000016540108,
+          "normalized": -0.4492202699184418
+        },
+        "-lymphs": {
+          "value": 9.999999886195987,
+          "normalized": -0.6369478106498718
+        },
+        "-monos": {
+          "value": 12.000000152214259,
+          "normalized": 1.0247852802276611
+        },
+        "-polys": {
+          "value": 77.00000017446737,
+          "normalized": 0.425522118806839
+        },
+        "Hct": {
+          "value": 38.10000001956984,
+          "normalized": 0.6577553153038025
+        },
+        "Hgb": {
+          "value": 13.09999994631413,
+          "normalized": 0.8685568571090698
+        },
+        "MCHC": {
+          "value": 34.399999931162455,
+          "normalized": 1.0047416687011719
+        },
+        "MCV": {
+          "value": 92.99999994056694,
+          "normalized": 0.3390175998210907
+        },
+        "RDW": {
+          "value": 13.89999998084597,
+          "normalized": -0.5156385898590088
+        },
+        "WBC x 1000": {
+          "value": 9.899999995038554,
+          "normalized": -0.03705016151070595
+        },
+        "urinary specific gravity": {
+          "value": 1.0059999997538431,
+          "normalized": -1.4109199047088623
+        }
+      },
+      "masked_labs": {
+        "MCH": {
+          "predicted": 30.634332642763365,
+          "actual": 32.099999946932954,
+          "error": 1.465667304169589,
+          "normalized_predicted": 0.26848942041397095,
+          "normalized_actual": 0.830345094203949
+        },
+        "RBC": {
+          "predicted": 4.418051665756012,
+          "actual": 4.080000010689261,
+          "error": 0.33805165506675117,
+          "normalized_predicted": 0.8915630578994751,
+          "normalized_actual": 0.43102437257766724
+        },
+        "platelets x 1000": {
+          "predicted": 212.7124985430836,
+          "actual": 156.0000008361008,
+          "error": 56.71249770698279,
+          "normalized_predicted": -0.11094952374696732,
+          "normalized_actual": -0.6557517051696777
+        }
+      },
+      "truly_missing_labs": {
+        "paCO2": {
+          "predicted": 42.59852500414977,
+          "normalized_predicted": 0.1197112649679184,
+          "note": "Lab was never measured for this patient"
+        },
+        "creatinine": {
+          "predicted": 0.9458523119071192,
+          "normalized_predicted": -0.25805020332336426,
+          "note": "Lab was never measured for this patient"
+        },
+        "CPK-MB": {
+          "predicted": 5.4147690773886445,
+          "normalized_predicted": -0.1836700737476349,
+          "note": "Lab was never measured for this patient"
+        },
+        "sodium": {
+          "predicted": 139.55947210779854,
+          "normalized_predicted": 0.23763762414455414,
+          "note": "Lab was never measured for this patient"
+        },
+        "anion gap": {
+          "predicted": 11.250741537348874,
+          "normalized_predicted": 0.23782344162464142,
+          "note": "Lab was never measured for this patient"
+        },
+        "magnesium": {
+          "predicted": 1.9917740470799257,
+          "normalized_predicted": 0.11413416266441345,
+          "note": "Lab was never measured for this patient"
+        },
+        "chloride": {
+          "predicted": 104.28771643786646,
+          "normalized_predicted": 0.14063908159732819,
+          "note": "Lab was never measured for this patient"
+        },
+        "paO2": {
+          "predicted": 93.54094756438374,
+          "normalized_predicted": -0.2290685772895813,
+          "note": "Lab was never measured for this patient"
+        },
+        "albumin": {
+          "predicted": 3.627223455638952,
+          "normalized_predicted": 0.8145716190338135,
+          "note": "Lab was never measured for this patient"
+        },
+        "phosphate": {
+          "predicted": 3.2504391370010115,
+          "normalized_predicted": -0.09981697052717209,
+          "note": "Lab was never measured for this patient"
+        },
+        "total protein": {
+          "predicted": 6.997726427148155,
+          "normalized_predicted": 0.7247893810272217,
+          "note": "Lab was never measured for this patient"
+        },
+        "O2 Sat (%)": {
+          "predicted": 97.21381009913969,
+          "normalized_predicted": 0.34951043128967285,
+          "note": "Lab was never measured for this patient"
+        },
+        "HCO3": {
+          "predicted": 26.464518165099882,
+          "normalized_predicted": 0.35841965675354004,
+          "note": "Lab was never measured for this patient"
+        },
+        "PTT": {
+          "predicted": 31.588228927217866,
+          "normalized_predicted": -0.2837491035461426,
+          "note": "Lab was never measured for this patient"
+        },
+        "BUN": {
+          "predicted": 16.966404979548464,
+          "normalized_predicted": -0.31488585472106934,
+          "note": "Lab was never measured for this patient"
+        },
+        "FiO2": {
+          "predicted": 31.351432949617802,
+          "normalized_predicted": -0.10701092332601547,
+          "note": "Lab was never measured for this patient"
+        },
+        "bedside glucose": {
+          "predicted": 136.04615617074643,
+          "normalized_predicted": -0.13427582383155823,
+          "note": "Lab was never measured for this patient"
+        },
+        "bicarbonate": {
+          "predicted": 26.96898463747491,
+          "normalized_predicted": 0.17373795807361603,
+          "note": "Lab was never measured for this patient"
+        },
+        "calcium": {
+          "predicted": 8.878926050592932,
+          "normalized_predicted": 0.5303964614868164,
+          "note": "Lab was never measured for this patient"
+        },
+        "triglycerides": {
+          "predicted": 136.75967699346683,
+          "normalized_predicted": -0.11246612668037415,
+          "note": "Lab was never measured for this patient"
+        },
+        "PT - INR": {
+          "predicted": 1.1594893340848806,
+          "normalized_predicted": -0.32338178157806396,
+          "note": "Lab was never measured for this patient"
+        },
+        "glucose": {
+          "predicted": 119.10332364828412,
+          "normalized_predicted": -0.201116681098938,
+          "note": "Lab was never measured for this patient"
+        },
+        "pH": {
+          "predicted": 7.406153816540322,
+          "normalized_predicted": 0.27625221014022827,
+          "note": "Lab was never measured for this patient"
+        },
+        "Base Excess": {
+          "predicted": 3.2053268166528848,
+          "normalized_predicted": 0.49520111083984375,
+          "note": "Lab was never measured for this patient"
+        },
+        "PT": {
+          "predicted": 13.858054174108425,
+          "normalized_predicted": -0.2950882911682129,
+          "note": "Lab was never measured for this patient"
+        },
+        "alkaline phos.": {
+          "predicted": 85.79973709540924,
+          "normalized_predicted": -0.15533490478992462,
+          "note": "Lab was never measured for this patient"
+        },
+        "lactate": {
+          "predicted": 1.7552066217496542,
+          "normalized_predicted": -0.18601994216442108,
+          "note": "Lab was never measured for this patient"
+        },
+        "MPV": {
+          "predicted": 9.939897679174848,
+          "normalized_predicted": 0.17151685059070587,
+          "note": "Lab was never measured for this patient"
+        },
+        "ALT (SGPT)": {
+          "predicted": 37.661866650465136,
+          "normalized_predicted": -0.12116111814975739,
+          "note": "Lab was never measured for this patient"
+        },
+        "TSH": {
+          "predicted": 2.062244473261387,
+          "normalized_predicted": -0.1099354699254036,
+          "note": "Lab was never measured for this patient"
+        },
+        "CPK": {
+          "predicted": 228.8985902509131,
+          "normalized_predicted": -0.14437150955200195,
+          "note": "Lab was never measured for this patient"
+        },
+        "total bilirubin": {
+          "predicted": 0.6348277215167495,
+          "normalized_predicted": -0.17077240347862244,
+          "note": "Lab was never measured for this patient"
+        },
+        "AST (SGOT)": {
+          "predicted": 26.67341871033345,
+          "normalized_predicted": -0.17587977647781372,
+          "note": "Lab was never measured for this patient"
+        },
+        "potassium": {
+          "predicted": 4.0103067197330855,
+          "normalized_predicted": -0.014111541211605072,
+          "note": "Lab was never measured for this patient"
+        },
+        "troponin - I": {
+          "predicted": 0.4173888007545461,
+          "normalized_predicted": -0.23029233515262604,
+          "note": "Lab was never measured for this patient"
+        }
+      }
+    }
+  },
+  {
+    "patient": {
+      "patient_id": 1817190,
+      "age": 67.0,
+      "gender": "Male",
+      "diagnoses": [
+        "578",
+        "585"
+      ],
+      "medications": [
+        "nan",
+        "pantoprazole",
+        "atorvastatin",
+        "hydrocodone",
+        "ondansetron",
+        "acetaminophen",
+        "alprazolam",
+        "plas",
+        "syringe"
+      ]
+    },
+    "predictions": {
+      "measured_labs": {
+        "-basos": {
+          "value": 0.6999999913002255,
+          "normalized": 0.8642347455024719
+        },
+        "-eos": {
+          "value": 4.4000000002647495,
+          "normalized": 1.1599199771881104
+        },
+        "-lymphs": {
+          "value": 13.000000116206435,
+          "normalized": -0.3605166971683502
+        },
+        "-monos": {
+          "value": 9.799999949507924,
+          "normalized": 0.4417549669742584
+        },
+        "-polys": {
+          "value": 86.29999968528486,
+          "normalized": 1.033118486404419
+        },
+        "ALT (SGPT)": {
+          "value": 11.00000050326156,
+          "normalized": -0.3331514000892639
+        },
+        "BUN": {
+          "value": 26.000000089218304,
+          "normalized": 0.20560500025749207
+        },
+        "CPK-MB": {
+          "value": 4.200000254097826,
+          "normalized": -0.21757081151008606
+        },
+        "Hct": {
+          "value": 24.100000174192516,
+          "normalized": -1.6010169982910156
+        },
+        "Hgb": {
+          "value": 8.200000036182765,
+          "normalized": -1.3877546787261963
+        },
+        "MCH": {
+          "value": 30.099999995783328,
+          "normalized": 0.06365587562322617
+        },
+        "MCV": {
+          "value": 88.90000001724493,
+          "normalized": -0.25995782017707825
+        },
+        "MPV": {
+          "value": 8.399999965804524,
+          "normalized": -0.9636098742485046
+        },
+        "PT": {
+          "value": 11.599999842762962,
+          "normalized": -0.6644368171691895
+        },
+        "PT - INR": {
+          "value": 1.1000000013577793,
+          "normalized": -0.41450831294059753
+        },
+        "PTT": {
+          "value": 26.999999894368322,
+          "normalized": -0.5266488790512085
+        },
+        "RBC": {
+          "value": 2.719999993290506,
+          "normalized": -1.4217475652694702
+        },
+        "RDW": {
+          "value": 15.799999999630808,
+          "normalized": 0.30700981616973877
+        },
+        "WBC x 1000": {
+          "value": 7.099999849385007,
+          "normalized": -0.5367908477783203
+        },
+        "albumin": {
+          "value": 3.199999997550667,
+          "normalized": 0.23434045910835266
+        },
+        "alkaline phos.": {
+          "value": 55.00000166393845,
+          "normalized": -0.6542730331420898
+        },
+        "anion gap": {
+          "value": 10.0000000062181,
+          "normalized": -0.05917316675186157
+        },
+        "calcium": {
+          "value": 8.90000000692823,
+          "normalized": 0.5604560971260071
+        },
+        "chloride": {
+          "value": 97.00000019857228,
+          "normalized": -1.1444982290267944
+        },
+        "creatinine": {
+          "value": 7.62000007514938,
+          "normalized": 5.997923374176025
+        },
+        "glucose": {
+          "value": 80.00000162670304,
+          "normalized": -0.8984826803207397
+        },
+        "platelets x 1000": {
+          "value": 221.0000000869639,
+          "normalized": -0.03133657947182655
+        },
+        "potassium": {
+          "value": 3.599999994979637,
+          "normalized": -0.7833898067474365
+        },
+        "sodium": {
+          "value": 135.99999994358174,
+          "normalized": -0.5652742981910706
+        },
+        "total bilirubin": {
+          "value": 0.4999999832949925,
+          "normalized": -0.2736905515193939
+        },
+        "total protein": {
+          "value": 4.999999998727652,
+          "normalized": -1.1882634162902832
+        },
+        "triglycerides": {
+          "value": 80.0000026115746,
+          "normalized": -0.5547478199005127
+        }
+      },
+      "masked_labs": {
+        "AST (SGOT)": {
+          "predicted": 27.701071617745576,
+          "actual": 11.000002630806875,
+          "error": 16.7010689869387,
+          "normalized_predicted": -0.17098364233970642,
+          "normalized_actual": -0.2505539655685425
+        },
+        "CPK": {
+          "predicted": 97.23856501579161,
+          "actual": 56.999984149008014,
+          "error": 40.23858086678359,
+          "normalized_predicted": -0.23129822313785553,
+          "normalized_actual": -0.25786519050598145
+        },
+        "MCHC": {
+          "predicted": 32.49401797373477,
+          "actual": 33.89999998546916,
+          "error": 1.4059820117343875,
+          "normalized_predicted": -0.35705363750457764,
+          "normalized_actual": 0.6474992632865906
+        }
+      },
+      "truly_missing_labs": {
+        "paCO2": {
+          "predicted": 35.75625145858609,
+          "normalized_predicted": -0.41582363843917847,
+          "note": "Lab was never measured for this patient"
+        },
+        "bicarbonate": {
+          "predicted": 24.579828350535074,
+          "normalized_predicted": -0.325286865234375,
+          "note": "Lab was never measured for this patient"
+        },
+        "TSH": {
+          "predicted": 0.9607945620064289,
+          "normalized_predicted": -0.37517035007476807,
+          "note": "Lab was never measured for this patient"
+        },
+        "phosphate": {
+          "predicted": 3.031611881930321,
+          "normalized_predicted": -0.2782696485519409,
+          "note": "Lab was never measured for this patient"
+        },
+        "lactate": {
+          "predicted": 1.3354337336808684,
+          "normalized_predicted": -0.3480427861213684,
+          "note": "Lab was never measured for this patient"
+        },
+        "O2 Sat (%)": {
+          "predicted": 94.31140822359055,
+          "normalized_predicted": -0.20247849822044373,
+          "note": "Lab was never measured for this patient"
+        },
+        "pH": {
+          "predicted": 7.369532666033453,
+          "normalized_predicted": -0.08843386918306351,
+          "note": "Lab was never measured for this patient"
+        },
+        "urinary specific gravity": {
+          "predicted": 1.015003674596744,
+          "normalized_predicted": -0.21220070123672485,
+          "note": "Lab was never measured for this patient"
+        },
+        "HCO3": {
+          "predicted": 21.127821942612005,
+          "normalized_predicted": -0.4430546164512634,
+          "note": "Lab was never measured for this patient"
+        },
+        "Base Excess": {
+          "predicted": -2.8554723051847177,
+          "normalized_predicted": -0.4115225076675415,
+          "note": "Lab was never measured for this patient"
+        },
+        "magnesium": {
+          "predicted": 1.8399297124698697,
+          "normalized_predicted": -0.3703569173812866,
+          "note": "Lab was never measured for this patient"
+        },
+        "FiO2": {
+          "predicted": 33.52372424108716,
+          "normalized_predicted": -0.09386232495307922,
+          "note": "Lab was never measured for this patient"
+        },
+        "paO2": {
+          "predicted": 80.31122726685433,
+          "normalized_predicted": -0.4161614179611206,
+          "note": "Lab was never measured for this patient"
+        },
+        "bedside glucose": {
+          "predicted": 120.36084880205638,
+          "normalized_predicted": -0.40686529874801636,
+          "note": "Lab was never measured for this patient"
+        },
+        "troponin - I": {
+          "predicted": -0.08294211960076847,
+          "normalized_predicted": -0.296058714389801,
+          "note": "Lab was never measured for this patient"
+        }
+      }
+    }
+  },
+  {
+    "patient": {
+      "patient_id": 671293,
+      "age": 74.0,
+      "gender": "Male",
+      "diagnoses": [
+        "440"
+      ],
+      "medications": [
+        "morphine",
+        "midazolam",
+        "docusate",
+        "acetaminophen",
+        "nan",
+        "polyethylene",
+        "diphenhydramine",
+        "labetalol",
+        "lorazepam",
+        "fentanyl"
+      ]
+    },
+    "predictions": {
+      "measured_labs": {
+        "ALT (SGPT)": {
+          "value": 16.00000173486425,
+          "normalized": -0.2933960556983948
+        },
+        "AST (SGOT)": {
+          "value": 21.000000514201652,
+          "normalized": -0.20291012525558472
+        },
+        "BUN": {
+          "value": 31.999999879741935,
+          "normalized": 0.5513084530830383
+        },
+        "FiO2": {
+          "value": 20.99999950533082,
+          "normalized": -0.1696668118238449
+        },
+        "Hct": {
+          "value": 37.600000170226465,
+          "normalized": 0.5770848989486694
+        },
+        "MCH": {
+          "value": 31.10000001994745,
+          "normalized": 0.44700050354003906
+        },
+        "MCV": {
+          "value": 94.00000002137598,
+          "normalized": 0.4851091802120209
+        },
+        "PT - INR": {
+          "value": 1.3999999993711751,
+          "normalized": 0.045035574585199356
+        },
+        "PTT": {
+          "value": 34.00000008524718,
+          "normalized": -0.1560705006122589
+        },
+        "RBC": {
+          "value": 4.019999992549585,
+          "normalized": 0.34928441047668457
+        },
+        "RDW": {
+          "value": 13.20000001015253,
+          "normalized": -0.8187195658683777
+        },
+        "WBC x 1000": {
+          "value": 12.399999932016183,
+          "normalized": 0.40914684534072876
+        },
+        "albumin": {
+          "value": 2.700000007636706,
+          "normalized": -0.444731742143631
+        },
+        "alkaline phos.": {
+          "value": 83.99999971805362,
+          "normalized": -0.18448962271213531
+        },
+        "anion gap": {
+          "value": 3.0000001906798204,
+          "normalized": -1.7213680744171143
+        },
+        "calcium": {
+          "value": 8.100000002069391,
+          "normalized": -0.5806542038917542
+        },
+        "chloride": {
+          "value": 109.00000012450414,
+          "normalized": 0.9716170430183411
+        },
+        "creatinine": {
+          "value": 1.5400000076764353,
+          "normalized": 0.29887068271636963
+        },
+        "glucose": {
+          "value": 121.00000033913021,
+          "normalized": -0.16729147732257843
+        },
+        "platelets x 1000": {
+          "value": 197.99999893212382,
+          "normalized": -0.2522834837436676
+        },
+        "potassium": {
+          "value": 4.40000000514978,
+          "normalized": 0.7165188789367676
+        },
+        "total bilirubin": {
+          "value": 0.2999999999430606,
+          "normalized": -0.4263566732406616
+        },
+        "total protein": {
+          "value": 6.999999970122787,
+          "normalized": 0.7269665598869324
+        }
+      },
+      "masked_labs": {
+        "Hgb": {
+          "predicted": 12.185917192851555,
+          "actual": 12.499999999585413,
+          "error": 0.31408280673385747,
+          "normalized_predicted": 0.4476475715637207,
+          "normalized_actual": 0.5922738313674927
+        },
+        "MCHC": {
+          "predicted": 33.145041556352545,
+          "actual": 33.199999994759956,
+          "error": 0.05495843840741088,
+          "normalized_predicted": 0.10809287428855896,
+          "normalized_actual": 0.14735984802246094
+        },
+        "MPV": {
+          "predicted": 9.691546241512347,
+          "actual": 9.099999993293622,
+          "error": 0.5915462482187248,
+          "normalized_predicted": -0.01155398041009903,
+          "normalized_actual": -0.4476088881492615
+        },
+        "PT": {
+          "predicted": 13.771406644804024,
+          "actual": 17.399999934821086,
+          "error": 3.6285932900170614,
+          "normalized_predicted": -0.30926117300987244,
+          "normalized_actual": 0.28426554799079895
+        },
+        "bicarbonate": {
+          "predicted": 25.736368429554577,
+          "actual": 28.00000004908354,
+          "error": 2.2636316195289616,
+          "normalized_predicted": -0.08371949195861816,
+          "normalized_actual": 0.38908690214157104
+        },
+        "sodium": {
+          "predicted": 138.4257830957462,
+          "actual": 140.00000004140745,
+          "error": 1.5742169456612487,
+          "normalized_predicted": -0.0180891752243042,
+          "normalized_actual": 0.3370077311992645
+        }
+      },
+      "truly_missing_labs": {
+        "paCO2": {
+          "predicted": 39.33441065294355,
+          "normalized_predicted": -0.13576626777648926,
+          "note": "Lab was never measured for this patient"
+        },
+        "CPK-MB": {
+          "predicted": 4.1820476214510665,
+          "normalized_predicted": -0.2180718183517456,
+          "note": "Lab was never measured for this patient"
+        },
+        "-basos": {
+          "predicted": 0.2028904716180815,
+          "normalized_predicted": -0.30088192224502563,
+          "note": "Lab was never measured for this patient"
+        },
+        "magnesium": {
+          "predicted": 1.9302150255777832,
+          "normalized_predicted": -0.08228275924921036,
+          "note": "Lab was never measured for this patient"
+        },
+        "paO2": {
+          "predicted": 86.42873434241872,
+          "normalized_predicted": -0.329648494720459,
+          "note": "Lab was never measured for this patient"
+        },
+        "phosphate": {
+          "predicted": 3.1364255806095387,
+          "normalized_predicted": -0.192794531583786,
+          "note": "Lab was never measured for this patient"
+        },
+        "O2 Sat (%)": {
+          "predicted": 96.0719478393852,
+          "normalized_predicted": 0.13234707713127136,
+          "note": "Lab was never measured for this patient"
+        },
+        "HCO3": {
+          "predicted": 24.266894078420684,
+          "normalized_predicted": 0.028376668691635132,
+          "note": "Lab was never measured for this patient"
+        },
+        "-monos": {
+          "predicted": 8.131815870237386,
+          "normalized_predicted": -0.0003367587924003601,
+          "note": "Lab was never measured for this patient"
+        },
+        "bedside glucose": {
+          "predicted": 125.2933635351366,
+          "normalized_predicted": -0.32114484906196594,
+          "note": "Lab was never measured for this patient"
+        },
+        "triglycerides": {
+          "predicted": 118.04816744765176,
+          "normalized_predicted": -0.25826960802078247,
+          "note": "Lab was never measured for this patient"
+        },
+        "pH": {
+          "predicted": 7.389209685164351,
+          "normalized_predicted": 0.10751669108867645,
+          "note": "Lab was never measured for this patient"
+        },
+        "-polys": {
+          "predicted": 71.777542462431,
+          "normalized_predicted": 0.08432357013225555,
+          "note": "Lab was never measured for this patient"
+        },
+        "Base Excess": {
+          "predicted": 1.2452123569685298,
+          "normalized_predicted": 0.20195890963077545,
+          "note": "Lab was never measured for this patient"
+        },
+        "lactate": {
+          "predicted": 1.6230951095809147,
+          "normalized_predicted": -0.23701199889183044,
+          "note": "Lab was never measured for this patient"
+        },
+        "-eos": {
+          "predicted": 1.4239119916426357,
+          "normalized_predicted": -0.24859267473220825,
+          "note": "Lab was never measured for this patient"
+        },
+        "TSH": {
+          "predicted": 1.4953242150588344,
+          "normalized_predicted": -0.24645282328128815,
+          "note": "Lab was never measured for this patient"
+        },
+        "CPK": {
+          "predicted": 161.98128356990344,
+          "normalized_predicted": -0.18855273723602295,
+          "note": "Lab was never measured for this patient"
+        },
+        "urinary specific gravity": {
+          "predicted": 1.0153426577666198,
+          "normalized_predicted": -0.16706961393356323,
+          "note": "Lab was never measured for this patient"
+        },
+        "-lymphs": {
+          "predicted": 16.384008027438675,
+          "normalized_predicted": -0.0487016960978508,
+          "note": "Lab was never measured for this patient"
+        },
+        "troponin - I": {
+          "predicted": 0.30932270808785045,
+          "normalized_predicted": -0.2444971650838852,
+          "note": "Lab was never measured for this patient"
+        }
+      }
+    }
+  },
+  {
+    "patient": {
+      "patient_id": 249328,
+      "age": 87.0,
+      "gender": "Male",
+      "diagnoses": [
+        "785",
+        "518",
+        "288",
+        "038",
+        "595",
+        "411",
+        "427"
+      ],
+      "medications": [
+        "lactated",
+        "propofol",
+        "metoprolol",
+        "furosemide",
+        "nan",
+        "sodium",
+        "insulin",
+        "glucagon",
+        "potassium",
+        "vancomycin"
+      ]
+    },
+    "predictions": {
+      "measured_labs": {
+        "-basos": {
+          "value": 0.5000000054829545,
+          "normalized": 0.3954782485961914
+        },
+        "-eos": {
+          "value": 0.899999989237821,
+          "normalized": -0.4965479373931885
+        },
+        "-lymphs": {
+          "value": 6.9999999796186465,
+          "normalized": -0.913378894329071
+        },
+        "-monos": {
+          "value": 4.0000001511743655,
+          "normalized": -1.0953247547149658
+        },
+        "-polys": {
+          "value": 87.59999928827261,
+          "normalized": 1.118051290512085
+        },
+        "ALT (SGPT)": {
+          "value": 32.99999955034487,
+          "normalized": -0.15822793543338776
+        },
+        "AST (SGOT)": {
+          "value": 27.000001120807397,
+          "normalized": -0.17432381212711334
+        },
+        "BUN": {
+          "value": 36.00000008492208,
+          "normalized": 0.7817774415016174
+        },
+        "Base Excess": {
+          "value": 7.999999922626403,
+          "normalized": 1.2125064134597778
+        },
+        "FiO2": {
+          "value": 50.00000000509469,
+          "normalized": 0.0058664423413574696
+        },
+        "Hct": {
+          "value": 31.4000000064872,
+          "normalized": -0.42322859168052673
+        },
+        "Hgb": {
+          "value": 9.799999980421054,
+          "normalized": -0.650999903678894
+        },
+        "MCH": {
+          "value": 28.699999961953555,
+          "normalized": -0.4730266034603119
+        },
+        "MCHC": {
+          "value": 31.29999998422501,
+          "normalized": -1.2101614475250244
+        },
+        "MCV": {
+          "value": 91.70000003951272,
+          "normalized": 0.14909857511520386
+        },
+        "O2 Sat (%)": {
+          "value": 97.99999997547438,
+          "normalized": 0.4990307688713074
+        },
+        "PT": {
+          "value": 11.400000109747012,
+          "normalized": -0.6971506476402283
+        },
+        "PTT": {
+          "value": 35.40000003898079,
+          "normalized": -0.08195482939481735
+        },
+        "RBC": {
+          "value": 3.4200000080364417,
+          "normalized": -0.4681149423122406
+        },
+        "RDW": {
+          "value": 15.600000003087551,
+          "normalized": 0.22041524946689606
+        },
+        "WBC x 1000": {
+          "value": 12.399999932016183,
+          "normalized": 0.40914684534072876
+        },
+        "bicarbonate": {
+          "value": 34.999999835958114,
+          "normalized": 1.851181983947754
+        },
+        "calcium": {
+          "value": 8.3000000032841,
+          "normalized": -0.29537662863731384
+        },
+        "chloride": {
+          "value": 107.99999998984143,
+          "normalized": 0.7952740788459778
+        },
+        "creatinine": {
+          "value": 1.0000000037755112,
+          "normalized": -0.20729517936706543
+        },
+        "glucose": {
+          "value": 95.0000015428464,
+          "normalized": -0.6309736967086792
+        },
+        "lactate": {
+          "value": 1.4999999843265885,
+          "normalized": -0.28452393412590027
+        },
+        "magnesium": {
+          "value": 2.6999999959580707,
+          "normalized": 2.3738770484924316
+        },
+        "paCO2": {
+          "value": 58.99999934955558,
+          "normalized": 1.4034310579299927
+        },
+        "paO2": {
+          "value": 102.00000020012253,
+          "normalized": -0.1094418466091156
+        },
+        "platelets x 1000": {
+          "value": 432.9999918983213,
+          "normalized": 2.0052173137664795
+        },
+        "potassium": {
+          "value": 4.100000001335976,
+          "normalized": 0.15405312180519104
+        },
+        "sodium": {
+          "value": 148.9999998321261,
+          "normalized": 2.3671422004699707
+        },
+        "total bilirubin": {
+          "value": 1.000000000238542,
+          "normalized": 0.10797479748725891
+        },
+        "total protein": {
+          "value": 5.900000007640445,
+          "normalized": -0.3264099061489105
+        },
+        "troponin - I": {
+          "value": 0.24000009001706957,
+          "normalized": -0.2536093294620514
+        }
+      },
+      "masked_labs": {
+        "HCO3": {
+          "predicted": 26.962385049491044,
+          "actual": 30.99999994954889,
+          "error": 4.0376149000578465,
+          "normalized_predicted": 0.43319016695022583,
+          "normalized_actual": 1.039566159248352
+        },
+        "PT - INR": {
+          "predicted": 1.2655844117240136,
+          "actual": 1.1000000013577793,
+          "error": 0.16558441036623428,
+          "normalized_predicted": -0.1608639657497406,
+          "normalized_actual": -0.41450831294059753
+        },
+        "albumin": {
+          "predicted": 2.9396998364528435,
+          "actual": 2.400000018077012,
+          "error": 0.5396998183758317,
+          "normalized_predicted": -0.11918475478887558,
+          "normalized_actual": -0.8521750569343567
+        },
+        "alkaline phos.": {
+          "predicted": 85.90561449715334,
+          "actual": 67.9999992374038,
+          "error": 17.90561525974954,
+          "normalized_predicted": -0.15361975133419037,
+          "normalized_actual": -0.4436804950237274
+        },
+        "bedside glucose": {
+          "predicted": 143.5542493794794,
+          "actual": 92.00000161607383,
+          "error": 51.554247763405556,
+          "normalized_predicted": -0.0037952959537506104,
+          "normalized_actual": -0.8997385501861572
+        },
+        "pH": {
+          "predicted": 7.423247766871804,
+          "actual": 7.360000000112606,
+          "error": 0.06324776675919797,
+          "normalized_predicted": 0.4464796781539917,
+          "normalized_actual": -0.18336345255374908
+        },
+        "phosphate": {
+          "predicted": 3.41326674495153,
+          "actual": 3.500000003955359,
+          "error": 0.08673325900382922,
+          "normalized_predicted": 0.03296823799610138,
+          "normalized_actual": 0.10369883477687836
+        }
+      },
+      "truly_missing_labs": {
+        "triglycerides": {
+          "predicted": 140.2728670337636,
+          "normalized_predicted": -0.08509071171283722,
+          "note": "Lab was never measured for this patient"
+        },
+        "TSH": {
+          "predicted": 1.8783771281940802,
+          "normalized_predicted": -0.15421168506145477,
+          "note": "Lab was never measured for this patient"
+        },
+        "CPK": {
+          "predicted": 280.13850929714044,
+          "normalized_predicted": -0.11054106056690216,
+          "note": "Lab was never measured for this patient"
+        },
+        "urinary specific gravity": {
+          "predicted": 1.0170604572206812,
+          "normalized_predicted": 0.06163246929645538,
+          "note": "Lab was never measured for this patient"
+        },
+        "anion gap": {
+          "predicted": 10.430880107724864,
+          "normalized_predicted": 0.043142080307006836,
+          "note": "Lab was never measured for this patient"
+        },
+        "CPK-MB": {
+          "predicted": 7.53973936601778,
+          "normalized_predicted": -0.12436820566654205,
+          "note": "Lab was never measured for this patient"
+        },
+        "MPV": {
+          "predicted": 9.980504191524854,
+          "normalized_predicted": 0.2014497071504593,
+          "note": "Lab was never measured for this patient"
+        }
+      }
+    }
+  }
+]

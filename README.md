@@ -651,6 +651,201 @@ ehr-graph-impute/
 
 ---
 
+## 🔍 How the Model Works: Step-by-Step
+
+### Single End-to-End Architecture
+
+**Important**: This project uses **one unified neural network** (HeteroRGCN) for all imputation tasks. There is no ensemble, no separate models, and no external preprocessing models. The 483,970 parameters handle everything from embeddings to predictions.
+
+### Graph Convolutions vs Regular Hidden Layers
+
+**HeteroConv layers are NOT regular hidden layers** - they perform message passing on the graph:
+
+**Regular Hidden Layer (MLP)**:
+```python
+# Each node processed independently
+for node in nodes:
+    output[node] = activation(Weight @ node.features + bias)
+```
+- No interaction between nodes
+- Just matrix multiplication
+
+**HeteroConv (Graph Convolutional Layer)**:
+```python
+# Each node aggregates information from neighbors
+for node in graph:
+    messages = []
+
+    # Step 1: Collect messages from all neighbors
+    for neighbor in node.neighbors:
+        edge_type = get_edge_type(node, neighbor)
+        message = transform(neighbor.embedding, edge_type)
+        messages.append(message)
+
+    # Step 2: Aggregate (mean pooling)
+    aggregated = mean(messages)
+
+    # Step 3: Combine with own embedding
+    output[node] = activation(aggregated + node.embedding)
+```
+
+**Concrete Example - Patient 42 needs Glucose prediction**:
+
+```
+Initial State:
+  Patient 42 embedding: [0.2, -0.5, 0.8, ...] (128-dim random vector)
+  Glucose embedding: [0.1, 0.3, -0.2, ...] (128-dim random vector)
+
+Layer 1 - HeteroConv aggregates 1-hop neighbors:
+  Patient 42 is connected to:
+    • 35 labs (BUN, creatinine, sodium, ...) via has_lab edges
+    • 5 diagnoses (diabetes, hypertension, ...) via has_diagnosis edges
+    • 8 medications (insulin, metformin, ...) via has_medication edges
+
+  Aggregate neighbor embeddings:
+    lab_context = mean([BUN_emb, creatinine_emb, sodium_emb, ...])
+    diagnosis_context = mean([diabetes_emb, hypertension_emb, ...])
+    medication_context = mean([insulin_emb, metformin_emb, ...])
+
+  Update patient embedding:
+    patient_42_updated = patient_42_emb + lab_context + dx_context + med_context
+    Result: [0.5, -0.2, 0.6, ...] (enriched with neighbor information!)
+
+Layer 2 - HeteroConv aggregates 2-hop neighbors:
+  Now Patient 42 indirectly sees:
+    • Other patients with similar diagnoses (what labs they have)
+    • Labs commonly co-occurring with glucose
+    • Medication effects on lab values
+
+  patient_42_final = [0.7, 0.1, 0.4, ...] (2x enriched!)
+
+Edge Prediction MLP:
+  Concatenate: [patient_42_final; glucose_final] → 256 dimensions
+  MLP: 256 → 64 → 32 → 1
+  Output: normalized glucose = -0.203 (z-score)
+
+Denormalize:
+  original_value = normalized * std + mean
+  glucose = -0.203 * 20.5 + 119.0 = 114.8 mg/dL
+```
+
+**Key Insight**: Graph convolutions let Patient 42's embedding "learn from" similar patients and related clinical context, while regular MLPs would treat each patient independently.
+
+### Normalization: Z-Score (Not Min-Max)
+
+**Why you see negative values in predictions:**
+
+We use **z-score normalization** (standardization), not min-max scaling:
+
+```python
+# Normalization (applied during preprocessing)
+normalized_value = (original_value - mean) / std
+
+# Denormalization (applied after prediction)
+original_value = normalized_value * std + mean
+```
+
+**Example with Sodium (mean=138.5, std=4.43)**:
+- Sodium = 135 (below mean) → normalized = **-0.791** (negative!)
+- Sodium = 139 (at mean) → normalized = **0.111** (close to 0)
+- Sodium = 146 (above mean) → normalized = **1.690** (positive)
+
+**Properties**:
+- Mean becomes 0, standard deviation becomes 1
+- Values below mean are negative
+- Values above mean are positive
+- Preserves outliers (unlike min-max squashing to 0-1)
+- Symmetric treatment of high/low values
+
+The model predicts normalized values internally, then we denormalize back to original lab units (mg/dL, mmol/L, etc.) for interpretation.
+
+### Complete Imputation Pipeline
+
+**Training Phase**:
+```
+1. Load patient data (demographics, labs, diagnoses, medications)
+2. Normalize lab values using z-score per lab type
+3. Build heterogeneous graph (patients, labs, diagnoses, medications as nodes)
+4. Create ID-based embeddings (learnable lookup tables)
+5. Mask 20% of patient-lab edges (simulate missing data)
+6. For each epoch:
+   a. Forward pass: Patient ID + Lab ID → HeteroConv (2 layers) → MLP → Prediction
+   b. Compute MAE loss with lab-wise reweighting
+   c. Backpropagate gradients to update embeddings + weights
+7. Save best model (lowest validation MAE)
+```
+
+**Inference Phase** (Predicting missing labs):
+```
+1. Load trained model + graph
+2. Input: Patient ID + Lab ID (e.g., Patient 249328 needs glucose)
+3. Look up embeddings:
+   - Patient 249328 → embedding_table[1523] → 128-dim vector
+   - Glucose → embedding_table[21] → 128-dim vector
+4. Run graph convolutions:
+   - Layer 1: Aggregate 1-hop neighbors (patient's labs, diagnoses, meds)
+   - Layer 2: Aggregate 2-hop neighbors (similar patients' patterns)
+5. Check patient degree:
+   - If < 6 labs: Use Tabular MLP on initial embeddings
+   - If ≥ 6 labs: Use GNN head on propagated embeddings
+6. Concatenate [patient_final; lab_final] → 256-dim
+7. MLP prediction: 256 → 64 → 32 → 1 (normalized value)
+8. Denormalize: predicted_value * std + mean → final result in original units
+```
+
+### Real-World Inference Script
+
+We provide a script to demonstrate lab imputation on actual patient examples:
+
+```bash
+# Generate predictions for 5 diverse patients
+python src/inference.py --num_examples 5 --detailed
+
+# Or specify particular patients
+python src/inference.py --patient_id 249328 671293 --detailed
+```
+
+**Output shows**:
+1. **Patient Context**: Demographics, top diagnoses, medications
+2. **Measured Labs**: Labs available to the model (used in training/prediction)
+3. **Masked Labs**: Labs held out in test set (predicted vs actual comparison)
+4. **Truly Missing Labs**: Labs never measured for this patient (predictions only)
+5. **Statistics**: MAE, median error, error percentiles
+
+**Example Output**:
+```
+PATIENT 249328
+Demographics: Age: 87.0, Gender: Male
+Top Diagnoses: 785, 518, 288, 038, 595
+Top Medications: lactated, propofol, metoprolol, furosemide
+
+LAB COVERAGE SUMMARY
+  Measured (available to model): 36 labs
+  Masked (held out for testing): 7 labs
+  Truly Missing (never measured): 7 labs
+  Total lab types: 50 labs
+
+MASKED LABS (Predicted vs Actual)
+Lab Name                  Predicted    Actual       Error
+------------------------------------------------------------------------
+pH                              7.423       7.360       0.063
+phosphate                       3.413       3.500       0.087
+PT - INR                        1.266       1.100       0.166
+albumin                         2.940       2.400       0.540
+HCO3                           26.962      31.000       4.038
+
+TRULY MISSING LABS (Predictions Only)
+Lab Name                  Predicted    Status
+------------------------------------------------------------------------
+CPK                           280.139 Never measured
+TSH                             1.878 Never measured
+triglycerides                 140.273 Never measured
+```
+
+This demonstrates the real clinical use case: imputing naturally missing lab values (33% missingness rate in eICU) for existing patients.
+
+---
+
 ## 🔍 Interpretation & Explainability
 
 ### Embedding Visualizations

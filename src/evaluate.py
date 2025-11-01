@@ -632,13 +632,21 @@ if __name__ == "__main__":
 
     logging.info("Model loaded successfully")
 
+    # Get CV target labs if enabled (must match training configuration)
+    cv_target_labs = None
+    if config['feature_space']['labs'].get('cv_target_mode', False):
+        cv_target_labs = config['feature_space']['labs'].get('cv_target_labs', [])
+        if cv_target_labs:
+            logging.info(f"CV target mode enabled: evaluating {len(cv_target_labs)} target labs only")
+
     # Get test edges
     masker = EdgeMasker(
         graph,
         train_split=config['train']['train_split'],
         val_split=config['train']['val_split'],
         test_split=config['train']['test_split'],
-        seed=config['train']['seed']
+        seed=config['train']['seed'],
+        cv_target_labs=cv_target_labs
     )
 
     test_edges, test_values, _, _ = masker.get_masked_data('test')

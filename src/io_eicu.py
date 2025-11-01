@@ -521,6 +521,9 @@ def select_cohort(
     subject_limit: Optional[int] = None,
     min_los_hours: Optional[float] = None,
     exclude_deaths: bool = False,
+    cv_cohort_mode: bool = False,
+    cv_diagnosis_codes: Optional[list] = None,
+    loader: Optional['eICULoader'] = None,
     **kwargs  # Catch any extra config params
 ) -> pd.DataFrame:
     """
@@ -534,6 +537,9 @@ def select_cohort(
         subject_limit: Maximum number of patients (None = no limit)
         min_los_hours: Minimum length of stay in hours (None = no limit)
         exclude_deaths: If True, exclude patients who died
+        cv_cohort_mode: If True, filter to patients with CV diagnoses
+        cv_diagnosis_codes: List of ICD-9 codes for CV conditions
+        loader: eICU loader instance (required if cv_cohort_mode=True)
 
     Returns:
         DataFrame with selected cohort
@@ -591,6 +597,36 @@ def select_cohort(
         cohort = cohort.sort_values(['uniquepid', 'unitadmittime24_dt'])
         cohort = cohort.groupby('uniquepid').first().reset_index()
         logger.info(f"After first ICU stay only: {len(cohort):,}")
+
+    # Filter by cardiovascular diagnoses
+    if cv_cohort_mode and cv_diagnosis_codes:
+        if loader is None:
+            logger.warning("CV cohort mode enabled but no loader provided. Skipping CV filter.")
+        else:
+            logger.info("Filtering to cardiovascular patients...")
+            logger.info(f"  Using {len(cv_diagnosis_codes)} CV diagnosis codes")
+
+            # Load all diagnoses
+            diagnoses = loader.load_diagnoses_icd()
+
+            # Create set of patient IDs that have at least one CV diagnosis
+            cv_patient_ids = set()
+
+            # Check for 3-digit matches (most common in eICU)
+            for code in cv_diagnosis_codes:
+                # Match both 3-digit (e.g., "428") and full codes (e.g., "428.0")
+                code_3digit = code.split('.')[0]  # Get 3-digit prefix
+
+                # Find patients with this diagnosis (exact or prefix match)
+                mask = (diagnoses['icd9code'].str.startswith(code_3digit, na=False))
+                matching_patients = diagnoses[mask]['patientunitstayid'].unique()
+                cv_patient_ids.update(matching_patients)
+
+            logger.info(f"  Found {len(cv_patient_ids)} patients with CV diagnoses")
+
+            # Filter cohort to CV patients
+            cohort = cohort[cohort['patientunitstayid'].isin(cv_patient_ids)]
+            logger.info(f"After CV diagnosis filter: {len(cohort):,}")
 
     # Limit number of subjects
     if subject_limit is not None and subject_limit < len(cohort):

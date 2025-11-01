@@ -58,7 +58,8 @@ class EdgeMasker:
         val_split: float = 0.15,
         test_split: float = 0.15,
         mask_fraction: float = 0.2,
-        seed: int = 42
+        seed: int = 42,
+        cv_target_labs: Optional[list] = None
     ):
         """
         Args:
@@ -68,6 +69,9 @@ class EdgeMasker:
             test_split: Fraction for testing
             mask_fraction: Fraction of training edges to mask
             seed: Random seed for reproducibility
+            cv_target_labs: Optional list of CV lab names to predict. If provided,
+                only edges to these labs will be masked/predicted. All other labs
+                remain as context.
         """
         self.data = data
         self.train_split = train_split
@@ -75,6 +79,7 @@ class EdgeMasker:
         self.test_split = test_split
         self.mask_fraction = mask_fraction
         self.seed = seed
+        self.cv_target_labs = cv_target_labs
 
         # Validate splits
         assert abs(train_split + val_split + test_split - 1.0) < 1e-6, \
@@ -87,6 +92,17 @@ class EdgeMasker:
 
         self.num_edges = self.edge_index.shape[1]
 
+        # Filter to CV target edges if specified
+        self.cv_edge_mask = self._create_cv_edge_mask()
+
+        if self.cv_edge_mask is not None:
+            logging.info(f"CV target mode enabled:")
+            logging.info(f"  Total edges: {self.num_edges}")
+            logging.info(f"  CV target edges: {self.cv_edge_mask.sum()} ({100*self.cv_edge_mask.sum()/self.num_edges:.1f}%)")
+            logging.info(f"  Context edges (not masked): {(~self.cv_edge_mask).sum()}")
+        else:
+            logging.info(f"Standard mode: All {self.num_edges} edges used for prediction")
+
         # Create splits
         self.train_mask, self.val_mask, self.test_mask = self._create_splits()
 
@@ -94,6 +110,55 @@ class EdgeMasker:
         logging.info(f"  Train: {self.train_mask.sum()} edges ({100*train_split:.1f}%)")
         logging.info(f"  Val: {self.val_mask.sum()} edges ({100*val_split:.1f}%)")
         logging.info(f"  Test: {self.test_mask.sum()} edges ({100*test_split:.1f}%)")
+
+    def _create_cv_edge_mask(self) -> Optional[torch.Tensor]:
+        """
+        Create mask identifying edges that connect to CV target labs.
+
+        Returns:
+            Boolean mask of shape [num_edges] where True indicates edge to CV lab,
+            or None if cv_target_labs not specified
+        """
+        if self.cv_target_labs is None or len(self.cv_target_labs) == 0:
+            return None
+
+        # Get lab metadata to map node indices to lab names
+        if not hasattr(self.data['lab'], 'metadata'):
+            logging.warning("Lab metadata not found in graph. CV filtering disabled.")
+            return None
+
+        lab_metadata = self.data['lab'].metadata
+
+        # Create set of CV target lab names for fast lookup
+        cv_lab_names_set = set(self.cv_target_labs)
+
+        # Find which lab node indices correspond to CV labs
+        cv_lab_indices = set()
+        matched_labs = []
+
+        for lab_idx, metadata in lab_metadata.items():
+            lab_name = metadata.get('label', '')
+            if lab_name in cv_lab_names_set:
+                cv_lab_indices.add(lab_idx)
+                matched_labs.append(lab_name)
+
+        logging.info(f"Matched {len(matched_labs)}/{len(cv_lab_names_set)} CV target labs:")
+        for lab_name in sorted(matched_labs):
+            logging.info(f"    - {lab_name}")
+
+        if len(cv_lab_indices) == 0:
+            logging.warning("No CV target labs found in graph. Using all labs.")
+            return None
+
+        # Create edge mask: True if edge connects to a CV lab
+        # edge_index[1] contains the lab node indices
+        lab_node_indices = self.edge_index[1]  # [num_edges]
+        cv_edge_mask = torch.tensor(
+            [lab_idx.item() in cv_lab_indices for lab_idx in lab_node_indices],
+            dtype=torch.bool
+        )
+
+        return cv_edge_mask
 
     def _create_splits(self) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -105,23 +170,38 @@ class EdgeMasker:
         Rationale:
             We split at the edge level (not patient level) to ensure
             each set contains diverse patient-lab combinations.
+
+            If CV target mode is enabled, only CV target edges are split.
+            All other edges remain as context (not in any split).
         """
         # Set seed for reproducibility
         torch.manual_seed(self.seed)
         np.random.seed(self.seed)
 
-        # Random permutation of edge indices
-        perm = torch.randperm(self.num_edges)
+        # Determine which edges to split
+        if self.cv_edge_mask is not None:
+            # Only split CV target edges
+            edges_to_split = torch.where(self.cv_edge_mask)[0]
+            num_edges_to_split = len(edges_to_split)
+        else:
+            # Split all edges
+            edges_to_split = torch.arange(self.num_edges)
+            num_edges_to_split = self.num_edges
+
+        # Random permutation of edges to split
+        perm_indices = torch.randperm(num_edges_to_split)
+        perm = edges_to_split[perm_indices]
 
         # Compute split boundaries
-        n_train = int(self.train_split * self.num_edges)
-        n_val = int(self.val_split * self.num_edges)
+        n_train = int(self.train_split * num_edges_to_split)
+        n_val = int(self.val_split * num_edges_to_split)
 
-        # Create masks
+        # Create masks (all False initially)
         train_mask = torch.zeros(self.num_edges, dtype=torch.bool)
         val_mask = torch.zeros(self.num_edges, dtype=torch.bool)
         test_mask = torch.zeros(self.num_edges, dtype=torch.bool)
 
+        # Assign splits only to edges being split
         train_mask[perm[:n_train]] = True
         val_mask[perm[n_train:n_train + n_val]] = True
         test_mask[perm[n_train + n_val:]] = True
@@ -601,6 +681,15 @@ def train_pipeline(config: Dict, graph_path: Path, output_dir: Path):
     graph = torch.load(graph_path, map_location=device)
     logging.info(f"Graph loaded successfully")
 
+    # Get CV target labs if enabled
+    cv_target_labs = None
+    if config['feature_space']['labs'].get('cv_target_mode', False):
+        cv_target_labs = config['feature_space']['labs'].get('cv_target_labs', [])
+        if cv_target_labs:
+            logging.info(f"CV target mode enabled with {len(cv_target_labs)} target labs")
+        else:
+            logging.warning("CV target mode enabled but no labs specified. Using all labs.")
+
     # Create edge masker
     masker = EdgeMasker(
         graph,
@@ -608,7 +697,8 @@ def train_pipeline(config: Dict, graph_path: Path, output_dir: Path):
         val_split=config['train']['val_split'],
         test_split=config['train']['test_split'],
         mask_fraction=config['train']['mask_fraction'],
-        seed=config['train']['seed']
+        seed=config['train']['seed'],
+        cv_target_labs=cv_target_labs
     )
 
     # Build model
@@ -659,10 +749,11 @@ if __name__ == "__main__":
     sys.path.append(str(Path(__file__).parent))
 
     from utils import load_config
+    from config_helper import load_and_process_config
 
-    # Load configuration
+    # Load configuration with experiment mode processing
     config_path = Path(__file__).parent.parent / "conf" / "config.yaml"
-    config = load_config(str(config_path))
+    config = load_and_process_config(str(config_path))
 
     # Paths
     graph_path = Path(config['data']['output_dir']) / "graph.pt"

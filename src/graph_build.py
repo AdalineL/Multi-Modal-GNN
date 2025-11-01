@@ -237,14 +237,26 @@ def build_heterogeneous_graph(
 
     # Patient-Medication edges
     if edge_config['patient_medication']['enabled']:
-        patient_med_edges = create_patient_medication_edges(
-            medications, indexers['patient'], indexers['medication']
+        # Check if we should use dosage weights (default: True)
+        use_dosage = config.get('use_medication_dosage', True)
+
+        patient_med_edges, patient_med_weights = create_patient_medication_edges(
+            medications, indexers['patient'], indexers['medication'],
+            use_dosage_weights=use_dosage
         )
         data['patient', 'has_medication', 'medication'].edge_index = patient_med_edges
-        logging.info(f"  (patient, has_medication, medication): {patient_med_edges.shape[1]} edges")
+
+        # Add edge attributes if available
+        if patient_med_weights is not None:
+            data['patient', 'has_medication', 'medication'].edge_attr = patient_med_weights
+            logging.info(f"  (patient, has_medication, medication): {patient_med_edges.shape[1]} edges with dosage weights (mean={patient_med_weights.mean():.3f}, std={patient_med_weights.std():.3f})")
+        else:
+            logging.info(f"  (patient, has_medication, medication): {patient_med_edges.shape[1]} edges (binary)")
 
         if edge_config['patient_medication']['bidirectional']:
             data['medication', 'has_medication_rev', 'patient'].edge_index = patient_med_edges.flip(0)
+            if patient_med_weights is not None:
+                data['medication', 'has_medication_rev', 'patient'].edge_attr = patient_med_weights
             logging.info(f"  (medication, has_medication_rev, patient): {patient_med_edges.shape[1]} edges (reverse)")
 
     # ------------------------------------------------------------------------
@@ -555,20 +567,25 @@ def create_patient_diagnosis_edges(
 def create_patient_medication_edges(
     medications: pd.DataFrame,
     patient_indexer: NodeIndexer,
-    medication_indexer: NodeIndexer
-) -> torch.Tensor:
+    medication_indexer: NodeIndexer,
+    use_dosage_weights: bool = True
+) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
     """
-    Create patient-medication edges.
+    Create patient-medication edges with optional dosage weights.
 
     Args:
-        medications: Medication DataFrame (SUBJECT_ID, DRUG)
+        medications: Medication DataFrame (SUBJECT_ID, DRUG, DOSAGE_NORM)
         patient_indexer: Patient node indexer
         medication_indexer: Medication node indexer
+        use_dosage_weights: If True and DOSAGE_NORM exists, use it as edge weights
 
     Returns:
         edge_index: [2, num_edges] tensor
+        edge_attr: [num_edges, 1] tensor with dosage weights (or None if not using)
     """
     edge_list = []
+    edge_weights = []
+    has_dosage = 'DOSAGE_NORM' in medications.columns
 
     for _, row in medications.iterrows():
         patient_idx = patient_indexer.get_index(row['SUBJECT_ID'])
@@ -577,13 +594,28 @@ def create_patient_medication_edges(
         if patient_idx is not None and med_idx is not None:
             edge_list.append([patient_idx, med_idx])
 
+            # Add dosage weight if available and requested
+            if use_dosage_weights and has_dosage:
+                # Convert normalized dosage to edge weight
+                # DOSAGE_NORM is z-scored, so 0 = average dose
+                # We'll use: weight = 1 + DOSAGE_NORM to keep weights positive
+                # This means: average dose = 1, higher dose > 1, lower dose < 1
+                dosage_norm = row['DOSAGE_NORM'] if pd.notna(row['DOSAGE_NORM']) else 0.0
+                weight = 1.0 + (dosage_norm * 0.5)  # Scale to moderate the effect
+                edge_weights.append(weight)
+            else:
+                edge_weights.append(1.0)  # Binary edge (all equal weight)
+
     if len(edge_list) == 0:
-        # No edges found, return empty tensor with correct shape
+        # No edges found, return empty tensors with correct shape
         edge_index = torch.empty((2, 0), dtype=torch.long)
+        edge_attr = torch.empty((0, 1), dtype=torch.float)
     else:
         edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
+        edge_attr = torch.tensor(edge_weights, dtype=torch.float).unsqueeze(1)
 
-    return edge_index
+    # Return edge_attr only if using dosage weights
+    return edge_index, edge_attr if (use_dosage_weights and has_dosage) else None
 
 
 # ============================================================================

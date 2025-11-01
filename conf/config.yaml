@@ -11,6 +11,47 @@
 # (hundreds of patients) to the full dataset (tens of thousands).
 # ========================================================================
 
+# ========================================================================
+# EXPERIMENT MODE SELECTOR
+# ========================================================================
+# Quick experiment selection - change this to switch between experiments
+# Options:
+#   "baseline"         - Predict all 50 labs (no filtering)
+#   "cv_all"           - Predict 12 CV labs (current best: +32% improvement)
+#   "heart_failure"    - Predict 8 HF-specific labs
+#   "acs"              - Predict 6 acute coronary syndrome labs
+#   "sepsis"           - Predict 7 sepsis-related labs
+#   "single_troponin"  - Predict ONLY troponin I (single-lab specialist)
+#   "single_bnp"       - Predict ONLY BNP
+#   "single_inr"       - Predict ONLY PT-INR
+#   "single_lactate"   - Predict ONLY lactate
+#   "custom"           - Use custom cv_target_labs list below
+# ========================================================================
+experiment_mode: "heart_failure"  # ← CHANGE THIS TO SWITCH EXPERIMENTS
+
+# Apply cohort filtering for this experiment?
+# Generally: false = better (uses all 1,834 patients)
+# Set to true only if testing disease-specific cohort hypothesis
+experiment_cohort_filter: false
+
+# ========================================================================
+# MEDICATION DOSAGE FEATURES (NEW!)
+# ========================================================================
+# Use medication dosage information as edge weights
+# Expected impact: +15-25 pp R² for medication-sensitive labs (PT-INR, K, Na, glucose)
+# Set to false to compare performance with/without dosage features
+use_medication_dosage: true  # ← SET TO TRUE TO ENABLE DOSAGE FEATURES
+
+# ========================================================================
+# EXPERIMENT DESCRIPTION (Auto-filled based on mode)
+# ========================================================================
+# This section is for documentation - ignored by code
+experiment_info:
+  name: "Iteration 1: CV Labs Focus"
+  description: "Predict 12 CV labs using all patients for context"
+  hypothesis: "Focusing model capacity on CV labs improves prediction vs baseline"
+  expected_outcome: "+32% improvement over baseline CV lab R²"
+
 # ------------------------------------------------------------------------
 # Data Paths
 # ------------------------------------------------------------------------
@@ -59,6 +100,40 @@ cohort:
   # Rationale: Depends on research question; set false to include all
   exclude_deaths: false
 
+  # Cardiovascular cohort filtering
+  # When enabled, only include patients with cardiovascular diagnoses
+  cv_cohort_mode: false
+
+  # ICD-9 codes for cardiovascular conditions (circulatory system diseases)
+  # Range: 390-459 covers all circulatory system diseases
+  cv_diagnosis_codes:
+    # Heart failure
+    - "428"
+    # Myocardial infarction
+    - "410"
+    # Hypertension
+    - "401"
+    - "402"
+    - "403"
+    - "404"
+    - "405"
+    # Arrhythmias
+    - "427"
+    # Coronary artery disease
+    - "414"
+    # Cardiomyopathy
+    - "425"
+    # Heart valve disorders
+    - "424"
+    # Atrial fibrillation (specific)
+    - "427.31"
+    # Congestive heart failure (specific)
+    - "428.0"
+    # Other ischemic heart disease
+    - "411"
+    - "412"
+    - "413"
+
 # ------------------------------------------------------------------------
 # Feature Engineering: Lab Tests
 # ------------------------------------------------------------------------
@@ -86,6 +161,118 @@ feature_space:
     # Minimum number of patients that must have this lab test
     # Rationale: Ensures statistical reliability
     min_patient_count: 10
+
+    # ========================================================================
+    # FOCUSED PREDICTION MODE
+    # ========================================================================
+    # When cv_target_mode: true, ALL labs are kept as graph nodes for context,
+    # but only specified labs are masked/predicted during training.
+    # This allows focused training while preserving rich context.
+    # ========================================================================
+
+    # NOTE: This is AUTO-SET based on experiment_mode above
+    # true for all modes except "baseline"
+    cv_target_mode: true
+
+    # ========================================================================
+    # PRESET LAB LISTS FOR EACH EXPERIMENT MODE
+    # ========================================================================
+    # These are used automatically based on experiment_mode setting
+    # You can also use experiment_mode: "custom" and define your own list
+    # ========================================================================
+
+    # --- All Cardiovascular Labs (experiment_mode: "cv_all") ---
+    cv_all_labs:
+      # Cardiac biomarkers
+      - "troponin - I"
+      - "troponin - T"
+      - "BNP"
+
+      # Lipid panel
+      - "total cholesterol"
+      - "HDL"
+      - "LDL"
+      - "triglycerides"
+
+      # Coagulation (anticoagulation monitoring)
+      - "PT - INR"
+      - "PT"
+      - "PTT"
+
+      # Electrolytes (arrhythmia risk, critical for CV function)
+      - "potassium"
+      - "sodium"
+      - "calcium"
+      - "magnesium"
+      - "ionized calcium"
+
+      # Metabolic (diabetes/CVD risk)
+      - "glucose"
+      - "bedside glucose"
+
+      # Perfusion marker
+      - "lactate"
+
+    # --- Heart Failure Specific (experiment_mode: "heart_failure") ---
+    heart_failure_labs:
+      - "BNP"                  # Primary HF biomarker
+      - "troponin - I"         # Myocardial injury
+      - "potassium"            # Arrhythmia risk
+      - "sodium"               # Volume status, SIADH
+      - "magnesium"            # Arrhythmia prevention
+      - "creatinine"           # Cardiorenal syndrome
+      - "BUN"                  # Kidney function
+      - "lactate"              # Tissue perfusion
+
+    # --- Acute Coronary Syndrome (experiment_mode: "acs") ---
+    acs_labs:
+      - "troponin - I"         # Primary MI marker
+      - "troponin - T"         # Alternative troponin
+      - "CPK-MB"               # Myocardial injury (if available)
+      - "CPK"                  # Muscle damage
+      - "lactate"              # Ischemia marker
+      - "glucose"              # Stress response
+      - "potassium"            # Arrhythmia risk post-MI
+
+    # --- Sepsis/Infection (experiment_mode: "sepsis") ---
+    sepsis_labs:
+      - "lactate"              # Tissue hypoperfusion
+      - "WBC x 1000"           # Infection marker
+      - "platelets x 1000"     # DIC risk
+      - "creatinine"           # AKI in sepsis
+      - "total bilirubin"      # Liver dysfunction
+      - "glucose"              # Stress hyperglycemia
+      - "Base Excess"          # Metabolic acidosis
+
+    # --- Single Lab Specialists ---
+    single_troponin:
+      - "troponin - I"
+
+    single_bnp:
+      - "BNP"
+
+    single_inr:
+      - "PT - INR"
+
+    single_lactate:
+      - "lactate"
+
+    # --- Custom Lab List (experiment_mode: "custom") ---
+    # Define your own custom lab list here when using custom mode
+    custom_labs:
+      - "troponin - I"
+      # Add more labs as needed
+
+    # ========================================================================
+    # ACTIVE LAB LIST (Auto-selected based on experiment_mode)
+    # ========================================================================
+    # This is the list actually used during training
+    # Do not edit this - it's automatically set by preprocess.py based on
+    # the experiment_mode you selected above
+    # ========================================================================
+    cv_target_labs:
+      # This will be overwritten at runtime based on experiment_mode
+      - "troponin - I"
 
   # ----------------------------------------------------------------------
   # Feature Engineering: Diagnoses

@@ -371,6 +371,35 @@ def process_medications(
     cohort_ids = set(cohort['SUBJECT_ID'])
     meds = meds[meds['SUBJECT_ID'].isin(cohort_ids)].copy()
 
+    # Extract and normalize dosage information if available
+    if 'DOSAGE' in meds.columns:
+        logging.info("Processing medication dosages...")
+        # Extract numeric dosage (handles formats like "5 3" → 5.0, "10.5" → 10.5)
+        meds['DOSAGE_STR'] = meds['DOSAGE'].astype(str)
+        meds['DOSAGE_CLEAN'] = meds['DOSAGE_STR'].str.extract(r'(\d+\.?\d*)')[0]
+        meds['DOSAGE_CLEAN'] = pd.to_numeric(meds['DOSAGE_CLEAN'], errors='coerce')
+
+        # Count how many have valid dosages
+        has_dosage = meds['DOSAGE_CLEAN'].notna().sum()
+        total = len(meds)
+        logging.info(f"  Extracted dosages for {has_dosage}/{total} ({100*has_dosage/total:.1f}%) medications")
+
+        # Normalize dosage per drug (z-score within each medication)
+        # This accounts for different drugs having different dose ranges
+        # e.g., Warfarin (2.5-10mg) vs Aspirin (81-325mg)
+        def safe_normalize(x):
+            """Z-score normalization with fallback for single-value groups"""
+            if len(x) <= 1 or x.std() < 1e-8:
+                return pd.Series(0.0, index=x.index)  # Single value or no variance
+            return (x - x.mean()) / x.std()
+
+        meds['DOSAGE_NORM'] = meds.groupby(drug_col)['DOSAGE_CLEAN'].transform(safe_normalize)
+
+        # Fill NaN dosages with 0 (neutral weight)
+        meds['DOSAGE_NORM'] = meds['DOSAGE_NORM'].fillna(0.0)
+
+        logging.info(f"  Normalized dosage: mean={meds['DOSAGE_NORM'].mean():.3f}, std={meds['DOSAGE_NORM'].std():.3f}")
+
     # Keep unique patient-medication pairs along with metadata if available
     cols_to_keep = ['SUBJECT_ID', drug_col]
     if 'ROUTE' in meds.columns:
@@ -381,8 +410,25 @@ def process_medications(
         cols_to_keep.append('PRN')
     if 'IV_ADMIXTURE' in meds.columns:
         cols_to_keep.append('IV_ADMIXTURE')
+    if 'DOSAGE_NORM' in meds.columns:
+        cols_to_keep.append('DOSAGE_NORM')
+        cols_to_keep.append('DOSAGE_CLEAN')  # Keep raw dosage too for debugging
 
-    meds_patient = meds[cols_to_keep].drop_duplicates(subset=['SUBJECT_ID', drug_col])
+    # Aggregate patient-medication pairs (take mean dosage if multiple records)
+    if 'DOSAGE_NORM' in cols_to_keep:
+        # Group by patient-drug and aggregate dosages
+        agg_dict = {}
+        for col in cols_to_keep:
+            if col in ['DOSAGE_NORM', 'DOSAGE_CLEAN']:
+                agg_dict[col] = 'mean'  # Average dosage
+            elif col in ['SUBJECT_ID', drug_col]:
+                agg_dict[col] = 'first'
+            else:
+                agg_dict[col] = 'first'  # Take first value for categorical
+
+        meds_patient = meds[cols_to_keep].groupby(['SUBJECT_ID', drug_col], as_index=False).agg(agg_dict)
+    else:
+        meds_patient = meds[cols_to_keep].drop_duplicates(subset=['SUBJECT_ID', drug_col])
 
     # Count frequency of each medication
     med_counts = meds_patient[drug_col].value_counts()
@@ -405,6 +451,11 @@ def process_medications(
 
     logging.info(f"Final: {len(meds_patient)} patient-medication pairs")
     logging.info(f"Coverage: {meds_patient['SUBJECT_ID'].nunique()} patients")
+
+    # Log dosage statistics if available
+    if 'DOSAGE_NORM' in meds_patient.columns:
+        dosage_available = meds_patient['DOSAGE_NORM'].ne(0).sum()
+        logging.info(f"Dosage info: {dosage_available}/{len(meds_patient)} ({100*dosage_available/len(meds_patient):.1f}%) pairs have dosage")
 
     # Log most common medications
     logging.info(f"Top 10 medications:\n{med_counts.head(10)}")
@@ -738,16 +789,20 @@ if __name__ == "__main__":
     sys.path.append(str(Path(__file__).parent))
 
     from utils import load_config, setup_logging, set_random_seeds
+    from config_helper import load_and_process_config, print_experiment_summary
 
-    # Load configuration
+    # Load configuration with experiment mode processing
     config_path = Path(__file__).parent.parent / "conf" / "config.yaml"
-    config = load_config(str(config_path))
+    config = load_and_process_config(str(config_path))
 
     # Setup
     setup_logging(
         level=config['logging']['level'],
         log_file=None  # Console only for now
     )
+
+    # Print experiment configuration
+    print_experiment_summary(config)
 
     set_random_seeds(config['train']['seed'])
 
@@ -760,7 +815,7 @@ if __name__ == "__main__":
         logging.info("Loading eICU data...")
         loader = eICULoader(config['data']['raw_dir'])
         patients = loader.load_patients()
-        cohort = select_cohort(patients, **config['cohort'])
+        cohort = select_cohort(patients, loader=loader, **config['cohort'])
 
     else:  # Default to MIMIC-III
         # Load MIMIC-III data

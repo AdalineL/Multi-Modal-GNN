@@ -56,7 +56,8 @@ class HeteroRGCN(nn.Module):
         dropout: float = 0.2,
         patient_feature_dim: int = None,  # Not used in Iteration 6 (learnable embeddings)
         use_batch_norm: bool = True,
-        activation: str = "relu"
+        activation: str = "relu",
+        task: str = "edge_regression"
     ):
         """
         Args:
@@ -67,6 +68,7 @@ class HeteroRGCN(nn.Module):
             patient_feature_dim: Dimension of patient input features
             use_batch_norm: Whether to use batch normalization
             activation: Activation function ("relu", "elu", "leaky_relu")
+            task: "edge_regression" or "link_prediction"
         """
         super().__init__()
 
@@ -152,15 +154,16 @@ class HeteroRGCN(nn.Module):
             raise ValueError(f"Unknown activation: {activation}")
 
         # ====================================================================
-        # Edge Regression Head
+        # Edge Prediction Head (Regression or Classification)
         # ====================================================================
 
-        # Predict lab value from concatenated patient and lab embeddings
+        # Predict lab value (regression) or lab presence (classification)
         self.edge_predictor = EdgeRegressionHead(
             input_dim=2 * hidden_dim,  # [h_patient; h_lab]
             hidden_dims=[64, 32],
             output_dim=1,
-            dropout=dropout
+            dropout=dropout,
+            task=task
         )
 
         # ====================================================================
@@ -173,7 +176,8 @@ class HeteroRGCN(nn.Module):
             input_dim=2 * hidden_dim,  # [h_patient; h_lab] (before GNN)
             hidden_dims=[64, 32],
             output_dim=1,
-            dropout=dropout
+            dropout=dropout,
+            task=task
         )
         self.degree_threshold = 6  # Hard gate: < 6 labs → tabular; >= 6 → GNN
 
@@ -351,6 +355,7 @@ class EdgeRegressionHead(nn.Module):
     Rationale:
         Lab value prediction is a regression task. We use an MLP to map
         the combined patient-lab representation to a scalar value.
+        For link prediction (binary classification), we add sigmoid activation.
         Multiple hidden layers allow non-linear transformations.
     """
 
@@ -359,16 +364,20 @@ class EdgeRegressionHead(nn.Module):
         input_dim: int,
         hidden_dims: list = [64, 32],
         output_dim: int = 1,
-        dropout: float = 0.2
+        dropout: float = 0.2,
+        task: str = "edge_regression"
     ):
         """
         Args:
             input_dim: Input dimension (2 * hidden_dim from node embeddings)
             hidden_dims: List of hidden layer dimensions
-            output_dim: Output dimension (1 for regression)
+            output_dim: Output dimension (1 for regression or classification)
             dropout: Dropout probability
+            task: "edge_regression" or "link_prediction"
         """
         super().__init__()
+
+        self.task = task
 
         layers = []
         prev_dim = input_dim
@@ -383,6 +392,10 @@ class EdgeRegressionHead(nn.Module):
         # Output layer
         layers.append(nn.Linear(prev_dim, output_dim))
 
+        # Add sigmoid for link prediction (binary classification)
+        if task == "link_prediction":
+            layers.append(nn.Sigmoid())
+
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, edge_embeds):
@@ -392,6 +405,8 @@ class EdgeRegressionHead(nn.Module):
 
         Returns:
             predictions: [num_edges, output_dim]
+                - For edge_regression: continuous values
+                - For link_prediction: probabilities in [0, 1]
         """
         return self.mlp(edge_embeds)
 
@@ -424,7 +439,8 @@ class HeteroGT(nn.Module):
         num_layers: int = 2,
         num_heads: int = 4,
         dropout: float = 0.2,
-        patient_feature_dim: int = 3
+        patient_feature_dim: int = 3,
+        task: str = "edge_regression"
     ):
         """
         Args:
@@ -434,6 +450,7 @@ class HeteroGT(nn.Module):
             num_heads: Number of attention heads
             dropout: Dropout probability
             patient_feature_dim: Patient input feature dimension
+            task: "edge_regression" or "link_prediction"
         """
         super().__init__()
 
@@ -464,7 +481,8 @@ class HeteroGT(nn.Module):
             input_dim=2 * hidden_dim,
             hidden_dims=[64, 32],
             output_dim=1,
-            dropout=dropout
+            dropout=dropout,
+            task=task
         )
 
     def _init_embeddings(self, data):
@@ -537,14 +555,17 @@ def build_model(config: Dict, metadata: Tuple, patient_feature_dim: int):
         by changing config['model']['architecture'].
     """
     model_config = config['model']
+    train_config = config['train']
     architecture = model_config['architecture']
+    task = train_config.get('task', 'edge_regression')
 
     common_args = {
         'metadata': metadata,
         'hidden_dim': model_config['hidden_dim'],
         'num_layers': model_config['num_layers'],
         'dropout': model_config['dropout'],
-        'patient_feature_dim': patient_feature_dim
+        'patient_feature_dim': patient_feature_dim,
+        'task': task
     }
 
     if architecture == "RGCN":
@@ -553,14 +574,14 @@ def build_model(config: Dict, metadata: Tuple, patient_feature_dim: int):
             use_batch_norm=model_config['use_batch_norm'],
             activation=model_config['activation']
         )
-        logging.info("Built HeteroRGCN model")
+        logging.info(f"Built HeteroRGCN model for task: {task}")
 
     elif architecture == "HGT":
         model = HeteroGT(
             **common_args,
             num_heads=model_config.get('num_heads', 4)
         )
-        logging.info("Built HeteroGT model")
+        logging.info(f"Built HeteroGT model for task: {task}")
 
     else:
         raise ValueError(f"Unknown architecture: {architecture}")
@@ -582,12 +603,16 @@ def compute_regression_loss(
     loss_type: str = "mae"
 ) -> torch.Tensor:
     """
-    Compute regression loss for lab value prediction.
+    Compute loss for lab value prediction or link prediction.
 
     Args:
-        predictions: Predicted lab values [num_edges]
-        targets: True lab values [num_edges]
-        loss_type: "mae" (Mean Absolute Error) or "mse" (Mean Squared Error)
+        predictions: Predicted values [num_edges]
+            - For regression: continuous lab values
+            - For classification: probabilities in [0, 1]
+        targets: True values [num_edges]
+            - For regression: continuous lab values
+            - For classification: binary labels (0 or 1)
+        loss_type: "mae", "mse", "huber", or "bce" (Binary Cross Entropy)
 
     Returns:
         Scalar loss
@@ -596,6 +621,7 @@ def compute_regression_loss(
         MAE vs MSE trade-off:
         - MAE: Robust to outliers, treats all errors equally
         - MSE: Penalizes large errors more, smooth gradients
+        - BCE: For binary classification (link prediction)
 
         For medical data with potential outliers, MAE is often preferred.
     """
@@ -606,6 +632,9 @@ def compute_regression_loss(
     elif loss_type == "huber":
         # Huber loss: MSE for small errors, MAE for large errors
         loss = F.huber_loss(predictions, targets)
+    elif loss_type == "bce":
+        # Binary Cross Entropy for link prediction
+        loss = F.binary_cross_entropy(predictions, targets)
     else:
         raise ValueError(f"Unknown loss type: {loss_type}")
 

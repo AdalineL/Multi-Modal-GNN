@@ -1,12 +1,15 @@
-# EHR Graph Imputation: Predicting Missing Lab Results Using Graph Neural Networks
+# EHR Graph Imputation: Link Prediction for Lab Test Recommendations Using Graph Neural Networks
 
 ## 📋 Project Overview
 
-This project implements a **Graph Neural Network (GNN) approach** to predict and impute missing laboratory test results in Electronic Health Records (EHRs). By modeling patients, lab tests, diagnoses, and medications as a heterogeneous graph with **learnable embeddings** and **degree-aware prediction**, the system achieves **R² = 0.242** (7x improvement over baseline) on the eICU ICU database.
+This project implements a **Graph Neural Network (GNN) approach** for **link prediction** to recommend which laboratory tests should be ordered for ICU patients. By modeling patients, lab tests, diagnoses, and medications as a heterogeneous graph with **learnable embeddings** and **medication dosage-weighted edges**, the system achieves **AUROC = 0.9275** and **AUPRC = 0.9332** on the eICU ICU database.
 
-**Key Innovation**: Instead of handcrafted features, we use pure ID-based embeddings that learn clinical relationships from data. The model discovers that CBC labs cluster together, metabolic panels form distinct groups, and similar patients share embedding space—all without explicit supervision.
+**Key Innovation**:
+- **Link prediction** framework that predicts patient-lab relationships (binary classification)
+- **Dosage-weighted edges**: Medication dosages are normalized and used as edge attributes, providing richer clinical context (+1.98% recall improvement)
+- **Learnable embeddings**: Pure ID-based embeddings that learn clinical relationships from data without handcrafted features
 
-**Dataset**: eICU Collaborative Research Database (1,834 patients, 61,484 lab measurements across 50 unique lab types)
+**Dataset**: eICU Collaborative Research Database (1,834 patients, 61,484 lab measurements across 50 unique lab types, 15,933 medication edges with dosage information)
 
 ---
 
@@ -29,39 +32,55 @@ Traditional imputation methods (mean filling, regression) treat features indepen
 
 ## 🏆 Key Achievements
 
-This project achieves **impressive results** on lab value imputation through systematic experimentation:
+This project achieves **impressive results** on lab test link prediction (predicting which labs should be ordered) through systematic experimentation:
 
 ### 🚀 Performance Results
 
-**Overall Results (Iteration 7 - Degree-Aware Hybrid)**:
-- **R² = 0.242** (7x improvement over baseline)
-- **MAE = 0.609** (4.1% improvement)
-- **RMSE = 0.889** (11.6% improvement)
+**Overall Results (Dosage-Weighted Model)**:
+- **AUROC = 0.9275** (Area Under ROC Curve)
+- **AUPRC = 0.9332** (Area Under Precision-Recall Curve)
+- **Accuracy = 84.47%**
+- **F1 Score = 83.69%**
+- **Recall = 79.71%** (successfully identifies 79.71% of patient-lab relationships)
+- **Precision = 88.10%** (88.10% of predicted relationships are correct)
 
-**Impact by Patient Group**:
-- **Rare Labs**: R² improved from -0.018 → **0.400** (significant improvement)
-- **Medium-Connectivity Patients**: R² improved from 0.061 → **0.215** (+254%)
-- **All Categories Improved**: No performance trade-offs
+**Dosage-Weighted vs Baseline Comparison**:
+| Metric | Baseline (No Dosage) | With Dosage Weights | Improvement |
+|--------|---------------------|---------------------|-------------|
+| **AUROC** | 0.9238 | **0.9275** | **+0.40%** ✓ |
+| **AUPRC** | 0.9303 | **0.9332** | **+0.31%** ✓ |
+| **Recall** | 78.15% | **79.71%** | **+1.98%** ✓ |
+| **F1 Score** | 83.07% | **83.69%** | **+0.75%** ✓ |
+| **True Positives** | 7,209 | **7,352** | **+143** ✓ |
+
+**Recall@K Metrics** (Ranking Performance):
+- **Recall@10 = 0.11%** - Top 10 predictions capture 0.11% of all positive cases
+- **Recall@20 = 0.22%** - Top 20 predictions capture 0.22% of all positive cases
+- **Recall@50 = 0.54%** - Top 50 predictions capture 0.54% of all positive cases
+- **Recall@100 = 1.08%** - Top 100 predictions capture 1.08% of all positive cases
 
 ### 💡 Technical Innovations
 
-1. **Pure Learnable Embeddings** (Iterations 2, 6, 7)
+1. **Link Prediction Framework**
+   - Binary classification for patient-lab edge existence
+   - Negative sampling for balanced training (50/50 positive/negative)
+   - Comprehensive evaluation with AUROC, AUPRC, and Recall@K
+
+2. **Medication Dosage as Edge Weights**
+   - Extracts numeric dosages from text (e.g., "5 mg" → 5.0)
+   - Per-medication min-max normalization [0,1]
+   - **91.1% coverage**: 14,522 of 15,933 medication edges have dosage information
+   - Provides clinical context about treatment intensity
+
+3. **Pure Learnable Embeddings**
    - ID-based lookup tables (no handcrafted features)
    - Model learns task-specific representations from data
-   - Outperforms feature engineering (APACHE scores added noise)
+   - 128-dimensional embeddings for all node types
 
-2. **Degree-Aware Hybrid Architecture** (Iteration 7)
-   - Adaptive prediction strategy based on patient connectivity
-   - Low-connectivity (< 6 labs): Tabular MLP for sparse graphs
-   - High-connectivity (≥ 6 labs): GNN for rich context
-
-3. **Lab-Wise Loss Reweighting** (Iteration 7)
-   - Inverse variance weighting prevents high-variance labs from dominating
-   - Balanced training across rare and common labs
-
-4. **Post-Hoc Outlier Guard** (Iteration 7)
-   - Winsorizes residuals at ±3σ per lab
-   - Reveals true model performance
+4. **Heterogeneous Graph Architecture**
+   - 4 node types: patient, lab, diagnosis, medication
+   - 6 edge types with bidirectional message passing
+   - Edge attributes: lab values (continuous) + medication dosages (continuous)
 
 ### 📊 Key Features
 
@@ -99,19 +118,22 @@ IMPORTANT: Node embeddings are pure ID lookups (no handcrafted features)
 - Lab "Glucose" (ID 5) → looks up row 5 from lab embedding table (128-dim vector)
 
 Edge Types:
-- (patient, has_lab, lab)           → Edge attribute: normalized lab value (0-1 range)
+- (patient, has_lab, lab)           → Edge attribute: normalized lab value (z-score)
 - (lab, has_lab_rev, patient)       → Reverse for bidirectional message passing
 - (patient, has_diagnosis, diagnosis)
 - (diagnosis, has_diagnosis_rev, patient)
-- (patient, has_medication, medication)
-- (medication, has_medication_rev, patient)
+- (patient, has_medication, medication)  → Edge attribute: normalized dosage [0,1]
+- (medication, has_medication_rev, patient) → Edge attribute: normalized dosage [0,1]
 
-Total: 61,484 patient-lab edges (test edges), 5,421 diagnosis edges, 15,933 medication edges
+Total:
+- 61,484 patient-lab edges (used for link prediction)
+- 5,421 diagnosis edges
+- 15,933 medication edges (14,522 with dosage information - 91.1% coverage)
 ```
 
-### Model Architecture (Iteration 7 - Current Best)
+### Model Architecture (Link Prediction with Dosage-Weighted Edges)
 
-**Key Innovation: Degree-Aware Hybrid with Pure Learnable Embeddings**
+**Key Innovation: Binary Link Prediction with Dosage-Aware Message Passing**
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -203,14 +225,14 @@ ELSE:  ← HIGH CONNECTIVITY (≥ 6 labs)
 - R-GCN layers: 114,818
 - Dual prediction heads: 18,560 (Tabular MLP + GNN head)
 
-**Training Strategy**: Mask-and-recover with lab-wise loss reweighting
-1. Split edges: 70% train, 15% validation, 15% test
-2. Randomly mask 20% of training edges during each epoch
-3. **Lab-wise reweighting**: Weight samples by 1/Var(lab_type)
+**Training Strategy**: Link Prediction with Negative Sampling
+1. Split edges: 70% train, 15% validation, 15% test (43,038 / 9,222 / 9,224 edges)
+2. **Negative sampling**: For each positive edge (patient-lab), sample equal number of negative edges (patient-lab pairs that don't exist)
+3. **Binary cross-entropy loss**: Predict probability of edge existence
+4. **Lab-wise reweighting**: Weight samples by 1/Var(lab_type)
    - Prevents high-variance labs from dominating loss
    - Balances learning across rare and common labs
-4. Train with MAE loss to predict masked values
-5. **Post-hoc outlier guard**: Winsorize residuals at ±3σ for evaluation
+5. **Evaluation metrics**: AUROC, AUPRC, Accuracy, Precision, Recall, F1, Recall@K
 
 ---
 
@@ -323,39 +345,109 @@ Creates:
 
 ## 📈 Performance Results
 
-### Iteration 7 - Current Best (Degree-Aware Hybrid)
+### Link Prediction Performance - Dosage-Weighted Model
 
-| Metric | Iteration 2<br>(Baseline) | Iteration 7<br>(Current) | Improvement |
-|--------|---------------------------|--------------------------|-------------|
-| **MAE** | 0.6351 | **0.6087** | **4.2% ✓** |
-| **RMSE** | 1.0064 | **0.8892** | **11.6% ✓✓** |
-| **R²** | 0.0288 | **0.2419** | **740% ✓✓✓** |
-| **MAPE** | 163.8% | **167.2%** | -2.1% |
+**Classification Metrics** (Binary prediction of patient-lab relationships):
 
-### Stratified Results
+| Metric | Baseline<br>(No Dosage) | Dosage-Weighted<br>(Current) | Improvement |
+|--------|--------------------------|------------------------------|-------------|
+| **Accuracy** | 84.07% | **84.47%** | **+0.48% ✓** |
+| **Precision** | 88.64% | **88.10%** | -0.61% |
+| **Recall** | 78.15% | **79.71%** | **+1.98% ✓✓** |
+| **F1 Score** | 83.07% | **83.69%** | **+0.75% ✓** |
 
-**By Patient Connectivity**:
-| Degree | MAE (Iter 2) | MAE (Iter 7) | R² (Iter 2) | R² (Iter 7) |
-|--------|--------------|--------------|-------------|-------------|
-| Low (1-5 labs) | 0.319 | 0.348 | -0.313 | -0.260 |
-| **Medium (6-15)** | 0.622 | **0.561** ✓✓ | 0.061 | **0.215** ✓✓✓ |
-| **High (16+)** | 0.636 | **0.609** ✓ | 0.034 | **0.242** ✓✓✓ |
+**Area Under Curve Metrics**:
 
-**By Lab Frequency**:
-| Category | MAE (Iter 2) | MAE (Iter 7) | R² (Iter 2) | R² (Iter 7) |
-|----------|--------------|--------------|-------------|-------------|
-| **Rare labs** | 0.509 | **0.475** ✓✓ | -0.018 | **0.400** ✓✓✓ |
-| **Common labs** | 0.637 | **0.617** ✓ | 0.015 | **0.219** ✓✓✓ |
-| **Very common** | 0.676 | **0.642** ✓ | 0.069 | **0.218** ✓✓✓ |
+| Metric | Baseline | Dosage-Weighted | Improvement |
+|--------|----------|-----------------|-------------|
+| **AUROC** | 0.9238 | **0.9275** | **+0.40% ✓** |
+| **AUPRC** | 0.9303 | **0.9332** | **+0.31% ✓** |
+
+**Recall@K Metrics** (Ranking performance - what % of true positives are in top-K predictions):
+
+| Metric | Value |
+|--------|-------|
+| **Recall@10** | 0.11% |
+| **Recall@20** | 0.22% |
+| **Recall@50** | 0.54% |
+| **Recall@100** | 1.08% |
+
+**Confusion Matrix** (Test set: 18,448 total samples, 50/50 positive/negative):
+
+| Model | TP | TN | FP | FN | Notes |
+|-------|----|----|----|----|-------|
+| **Baseline** | 7,209 | 8,300 | 924 | 2,015 | Without dosage |
+| **Dosage-Weighted** | **7,352** | 8,231 | 993 | **1,872** | **+143 more TPs, -143 fewer FNs** ✓ |
 
 **Key Achievements**:
-- ✅ **Rare labs now positive R²** (first time across all iterations!)
-- ✅ **Medium-connectivity fixed** (+254% R² improvement)
-- ✅ **All categories improved** (no trade-offs)
+- ✅ **Better recall (+1.98%)**: Identifies more patient-lab relationships correctly
+- ✅ **Higher AUROC & AUPRC**: Improved discrimination and ranking ability
+- ✅ **More true positives (+143)**: Better detection of existing edges
+- ✅ **Fewer false negatives (-143)**: Fewer missed predictions
 
 ---
 
 ## 🔬 Technical Deep Dive
+
+### Medication Dosage as Edge Weights
+
+**Innovation**: We extract and normalize medication dosages to use as edge attributes, providing richer clinical context than binary presence/absence.
+
+**Extraction Process**:
+```python
+def extract_numeric_dosage(dosage_str: str) -> Optional[float]:
+    """
+    Extract numeric dosage value from dosage string.
+
+    Examples:
+        "5 mg" -> 5.0
+        "10-20 mg" -> 10.0  (first number)
+        "0.5 ml" -> 0.5
+    """
+    match = re.search(r'(\d+\.?\d*)', str(dosage_str))
+    return float(match.group(1)) if match else None
+```
+
+**Normalization** (per medication):
+```python
+def normalize_dosages_per_medication(meds_df: pd.DataFrame):
+    """
+    Normalize dosage values per medication using min-max scaling.
+
+    Rationale:
+        Different medications have vastly different dosage ranges:
+        - Levothyroxine: 25-300 mcg (0.025-0.3 mg)
+        - Metformin: 500-2000 mg
+
+        Normalizing per medication ensures fair comparison.
+    """
+    for drug in meds_df['DRUG'].unique():
+        drug_mask = meds_df['DRUG'] == drug
+        dosages = meds_df.loc[drug_mask, 'DOSAGE_NUMERIC']
+
+        min_dose = dosages.min()
+        max_dose = dosages.max()
+
+        if max_dose > min_dose:
+            normalized = (dosages - min_dose) / (max_dose - min_dose)
+        else:
+            normalized = 0.5  # Neutral value if all same dose
+
+        meds_df.loc[drug_mask, 'DOSAGE_NORMALIZED'] = normalized
+
+    return meds_df
+```
+
+**Coverage**:
+- 15,933 total medication edges
+- **14,522 with dosage information (91.1%)**
+- Missing dosages filled with 0.5 (neutral value)
+
+**Impact**:
+- **+1.98% recall improvement** (78.15% → 79.71%)
+- **+143 additional true positives**
+- Model learns that higher dosages indicate more severe conditions
+- Provides treatment intensity context beyond medication presence
 
 ### Why Learnable Embeddings?
 
@@ -957,14 +1049,50 @@ MIT License. See `LICENSE` file.
 
 ---
 
+## 📊 Comparing Models
+
+To compare the baseline model (without dosage) vs the dosage-weighted model:
+
+```bash
+# Run comparison script
+python src/compare_results.py
+
+# View saved comparison report
+cat outputs/comparison_report.txt
+```
+
+The comparison report shows:
+- Classification metrics comparison (Accuracy, Precision, Recall, F1)
+- Area under curve metrics (AUROC, AUPRC)
+- Recall@K metrics
+- Confusion matrix differences
+- Detailed improvement analysis
+
+**Files Organization**:
+```
+outputs/
+├── baseline_without_dosage/     # Original model results
+│   ├── best_model.pt
+│   ├── evaluation_results.json
+│   └── training_history.json
+├── dosage_weighted/             # Dosage-weighted model results
+│   ├── best_model.pt
+│   ├── evaluation_results.json
+│   └── training_history.json
+├── comparison_report.txt        # Detailed comparison
+└── best_model.pt               # Current best model (dosage-weighted)
+```
+
+---
+
 ## 🎓 Citation
 
 ```bibtex
 @software{ehr_graph_impute2024,
-  title={EHR Graph Imputation: Predicting Missing Lab Results with Degree-Aware GNNs},
+  title={EHR Graph Imputation: Link Prediction for Lab Test Recommendations with Dosage-Weighted GNNs},
   author={Your Name},
   year={2024},
-  note={Achieves R²=0.242 (7x improvement) via learnable embeddings and degree-aware prediction},
+  note={Achieves AUROC=0.9275, AUPRC=0.9332 via dosage-weighted edges and learnable embeddings},
   url={https://github.com/yourusername/ehr-graph-impute}
 }
 ```

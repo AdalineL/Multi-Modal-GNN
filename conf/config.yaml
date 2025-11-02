@@ -213,8 +213,8 @@ model:
 train:
   # Primary task
   # Options: "edge_regression" (predict lab values), "link_prediction" (predict lab presence)
-  # Rationale: Regression imputes actual values, more clinically useful
-  task: "edge_regression"
+  # Rationale: Link prediction predicts which labs should be ordered (binary classification)
+  task: "link_prediction"
 
   # Fraction of observed patient-lab edges to mask during training
   # Rationale: 0.2 provides sufficient supervision while testing imputation
@@ -227,9 +227,9 @@ train:
   test_split: 0.15
 
   # Loss function
-  # Options: "mae" (Mean Absolute Error), "mse" (Mean Squared Error), "huber"
-  # Rationale: MAE is robust to outliers in lab values
-  loss: "mae"
+  # Options: "mae" (Mean Absolute Error), "mse" (Mean Squared Error), "huber", "bce" (Binary Cross Entropy)
+  # Rationale: BCE for binary classification (link prediction)
+  loss: "bce"
 
   # Number of training epochs
   # Rationale: Enough for convergence on small/medium datasets
@@ -268,28 +268,31 @@ train:
 # Evaluation Metrics
 # ------------------------------------------------------------------------
 evaluation:
-  # Primary metrics for edge regression
-  regression_metrics:
-    - "mae"   # Mean Absolute Error
-    - "rmse"  # Root Mean Squared Error
-    - "r2"    # R-squared coefficient
-    - "mape"  # Mean Absolute Percentage Error (for non-zero values)
+  # Primary metrics for link prediction (binary classification)
+  classification_metrics:
+    - "accuracy"   # Overall accuracy
+    - "precision"  # Precision (TP / (TP + FP))
+    - "recall"     # Recall/Sensitivity (TP / (TP + FN))
+    - "f1"         # F1 score (harmonic mean of precision/recall)
+    - "auroc"      # Area Under ROC Curve (AUROC)
+    - "auprc"      # Area Under Precision-Recall Curve (AUPRC)
+    - "recall@k"   # Recall at top-K predictions (K=10,20,50,100)
+    - "confusion_matrix"  # True Positives, False Positives, etc.
 
   # Compute per-lab metrics in addition to global
   # Rationale: Identifies which lab types are harder to predict
   per_lab_metrics: true
 
-  # Baseline comparisons
+  # Baseline comparisons for link prediction
   baselines:
-    - "global_mean"   # Predict overall mean lab value
-    - "per_lab_mean"  # Predict mean for each lab type
-    - "nearest_neighbor"  # Predict from most similar patient
+    - "random"          # Random prediction (50% threshold)
+    - "majority_class"  # Always predict most common class
+    - "lab_frequency"   # Predict based on lab popularity
 
   # Stratify metrics by patient characteristics
   stratify_by:
-    - "age_group"  # <40, 40-60, 60-80, >80
-    - "num_labs"   # Number of observed labs per patient
-    - "lab_frequency"  # Common vs rare lab tests
+    - "patient_degree"  # Number of observed labs per patient
+    - "lab_frequency"   # Common vs rare lab tests
 
 # ------------------------------------------------------------------------
 # Visualization

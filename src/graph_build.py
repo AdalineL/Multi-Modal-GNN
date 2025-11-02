@@ -235,16 +235,24 @@ def build_heterogeneous_graph(
             data['diagnosis', 'has_diagnosis_rev', 'patient'].edge_index = patient_dx_edges.flip(0)
             logging.info(f"  (diagnosis, has_diagnosis_rev, patient): {patient_dx_edges.shape[1]} edges (reverse)")
 
-    # Patient-Medication edges
+    # Patient-Medication edges (with optional dosage weights)
     if edge_config['patient_medication']['enabled']:
-        patient_med_edges = create_patient_medication_edges(
+        patient_med_edges, med_dosages = create_patient_medication_edges(
             medications, indexers['patient'], indexers['medication']
         )
         data['patient', 'has_medication', 'medication'].edge_index = patient_med_edges
-        logging.info(f"  (patient, has_medication, medication): {patient_med_edges.shape[1]} edges")
+
+        # Add dosage as edge attribute if available
+        if med_dosages is not None:
+            data['patient', 'has_medication', 'medication'].edge_attr = med_dosages
+            logging.info(f"  (patient, has_medication, medication): {patient_med_edges.shape[1]} edges with dosage weights")
+        else:
+            logging.info(f"  (patient, has_medication, medication): {patient_med_edges.shape[1]} edges")
 
         if edge_config['patient_medication']['bidirectional']:
             data['medication', 'has_medication_rev', 'patient'].edge_index = patient_med_edges.flip(0)
+            if med_dosages is not None:
+                data['medication', 'has_medication_rev', 'patient'].edge_attr = med_dosages
             logging.info(f"  (medication, has_medication_rev, patient): {patient_med_edges.shape[1]} edges (reverse)")
 
     # ------------------------------------------------------------------------
@@ -556,19 +564,28 @@ def create_patient_medication_edges(
     medications: pd.DataFrame,
     patient_indexer: NodeIndexer,
     medication_indexer: NodeIndexer
-) -> torch.Tensor:
+) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
     """
-    Create patient-medication edges.
+    Create patient-medication edges with optional dosage edge weights.
 
     Args:
-        medications: Medication DataFrame (SUBJECT_ID, DRUG)
+        medications: Medication DataFrame (SUBJECT_ID, DRUG, optional DOSAGE_NORMALIZED)
         patient_indexer: Patient node indexer
         medication_indexer: Medication node indexer
 
     Returns:
-        edge_index: [2, num_edges] tensor
+        Tuple of (edge_index, edge_attr)
+        - edge_index: [2, num_edges] tensor of (patient_idx, med_idx) pairs
+        - edge_attr: [num_edges, 1] tensor of normalized dosages (or None if not available)
+
+    Rationale:
+        Dosage information provides important context about medication intensity.
+        Higher dosages may indicate more severe conditions or different treatment strategies.
+        Storing dosage as edge attributes allows GNN to weight message passing accordingly.
     """
     edge_list = []
+    edge_attrs = []
+    has_dosage = 'DOSAGE_NORMALIZED' in medications.columns
 
     for _, row in medications.iterrows():
         patient_idx = patient_indexer.get_index(row['SUBJECT_ID'])
@@ -577,13 +594,23 @@ def create_patient_medication_edges(
         if patient_idx is not None and med_idx is not None:
             edge_list.append([patient_idx, med_idx])
 
+            if has_dosage:
+                dosage = row.get('DOSAGE_NORMALIZED', 0.5)  # Default to 0.5 if missing
+                edge_attrs.append(dosage)
+
     if len(edge_list) == 0:
-        # No edges found, return empty tensor with correct shape
+        # No edges found, return empty tensors with correct shape
         edge_index = torch.empty((2, 0), dtype=torch.long)
+        edge_attr = torch.empty((0, 1), dtype=torch.float32) if has_dosage else None
     else:
         edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
 
-    return edge_index
+        if has_dosage:
+            edge_attr = torch.tensor(edge_attrs, dtype=torch.float32).unsqueeze(1)
+        else:
+            edge_attr = None
+
+    return edge_index, edge_attr
 
 
 # ============================================================================

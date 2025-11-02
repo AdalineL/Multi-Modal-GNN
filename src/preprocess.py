@@ -312,6 +312,83 @@ def normalize_drug_name(drug: str) -> str:
     return drug
 
 
+def extract_numeric_dosage(dosage_str: str) -> Optional[float]:
+    """
+    Extract numeric dosage value from dosage string.
+
+    Args:
+        dosage_str: Dosage string (e.g., "5 mg", "10-20 mg", "0.5 ml")
+
+    Returns:
+        Numeric dosage value (first number found) or None
+
+    Examples:
+        "5 mg" -> 5.0
+        "10-20 mg" -> 10.0
+        "0.5 ml" -> 0.5
+    """
+    import re
+
+    if pd.isna(dosage_str) or dosage_str == '':
+        return None
+
+    # Extract first numeric value (handles decimals and integers)
+    match = re.search(r'(\d+\.?\d*)', str(dosage_str))
+    if match:
+        try:
+            return float(match.group(1))
+        except (ValueError, AttributeError):
+            return None
+    return None
+
+
+def normalize_dosages_per_medication(meds_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize dosage values per medication using min-max scaling.
+
+    Args:
+        meds_df: Medications DataFrame with DRUG and DOSAGE_NUMERIC columns
+
+    Returns:
+        DataFrame with added DOSAGE_NORMALIZED column [0, 1]
+
+    Rationale:
+        Different medications have vastly different dosage ranges:
+        - Levothyroxine: 25-300 mcg (0.025-0.3 mg)
+        - Metformin: 500-2000 mg
+
+        Normalizing per medication ensures fair comparison and helps
+        the model learn medication-specific dosing patterns.
+    """
+    meds_df = meds_df.copy()
+    meds_df['DOSAGE_NORMALIZED'] = np.nan
+
+    for drug in meds_df['DRUG'].unique():
+        drug_mask = meds_df['DRUG'] == drug
+        dosages = meds_df.loc[drug_mask, 'DOSAGE_NUMERIC']
+
+        # Filter out NaN values
+        valid_dosages = dosages[dosages.notna()]
+
+        if len(valid_dosages) > 0:
+            min_dose = valid_dosages.min()
+            max_dose = valid_dosages.max()
+
+            if max_dose > min_dose:
+                # Min-max normalization to [0, 1]
+                normalized = (dosages - min_dose) / (max_dose - min_dose)
+            else:
+                # All same dose, set to 0.5
+                normalized = pd.Series([0.5] * len(dosages), index=dosages.index)
+
+            meds_df.loc[drug_mask, 'DOSAGE_NORMALIZED'] = normalized
+
+    # Fill missing normalized dosages with 0.5 (neutral value)
+    meds_df['DOSAGE_NORMALIZED'] = meds_df['DOSAGE_NORMALIZED'].fillna(0.5)
+
+    return meds_df
+
+
 def process_medications(
     prescriptions: pd.DataFrame,
     cohort: pd.DataFrame,
@@ -381,6 +458,8 @@ def process_medications(
         cols_to_keep.append('PRN')
     if 'IV_ADMIXTURE' in meds.columns:
         cols_to_keep.append('IV_ADMIXTURE')
+    if 'DOSAGE' in meds.columns:
+        cols_to_keep.append('DOSAGE')
 
     meds_patient = meds[cols_to_keep].drop_duplicates(subset=['SUBJECT_ID', drug_col])
 
@@ -402,6 +481,13 @@ def process_medications(
 
     # Rename column for consistency
     meds_patient.rename(columns={drug_col: 'DRUG'}, inplace=True)
+
+    # Extract and normalize dosage values if available
+    if 'DOSAGE' in meds_patient.columns:
+        meds_patient['DOSAGE_NUMERIC'] = meds_patient['DOSAGE'].apply(extract_numeric_dosage)
+        # Normalize dosages to [0, 1] range per medication
+        meds_patient = normalize_dosages_per_medication(meds_patient)
+        logging.info(f"Extracted and normalized dosage information for {meds_patient['DOSAGE_NUMERIC'].notna().sum()} records")
 
     logging.info(f"Final: {len(meds_patient)} patient-medication pairs")
     logging.info(f"Coverage: {meds_patient['SUBJECT_ID'].nunique()} patients")

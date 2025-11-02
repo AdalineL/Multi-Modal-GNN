@@ -31,6 +31,73 @@ from utils import get_device, format_time, count_parameters
 
 
 # ============================================================================
+# Negative Sampling for Link Prediction
+# ============================================================================
+
+def sample_negative_edges(
+    graph: HeteroData,
+    num_samples: int,
+    existing_edges: torch.Tensor,
+    seed: Optional[int] = None
+) -> torch.Tensor:
+    """
+    Sample negative edges (patient-lab pairs that don't exist) for link prediction training.
+
+    Args:
+        graph: Heterogeneous graph
+        num_samples: Number of negative samples to generate
+        existing_edges: Tensor of existing edges [2, num_edges] to exclude
+        seed: Optional random seed for reproducibility
+
+    Returns:
+        Tensor of negative edge indices [2, num_samples]
+
+    Rationale:
+        For link prediction, we need both positive (existing edges) and negative
+        (non-existing edges) examples during training. This teaches the model to
+        output high probabilities for real edges and low probabilities for fake ones.
+    """
+    if seed is not None:
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+
+    num_patients = graph['patient'].num_nodes
+    num_labs = graph['lab'].num_nodes
+
+    # Convert existing edges to a set for fast lookup
+    existing_set = set()
+    for i in range(existing_edges.shape[1]):
+        patient_idx = existing_edges[0, i].item()
+        lab_idx = existing_edges[1, i].item()
+        existing_set.add((patient_idx, lab_idx))
+
+    # Sample negative edges
+    negative_edges = []
+    attempts = 0
+    max_attempts = num_samples * 100  # Prevent infinite loop
+
+    while len(negative_edges) < num_samples and attempts < max_attempts:
+        # Random patient and lab indices
+        patient_idx = np.random.randint(0, num_patients)
+        lab_idx = np.random.randint(0, num_labs)
+
+        # Check if this edge doesn't exist
+        if (patient_idx, lab_idx) not in existing_set:
+            negative_edges.append([patient_idx, lab_idx])
+            existing_set.add((patient_idx, lab_idx))  # Avoid duplicates
+
+        attempts += 1
+
+    if len(negative_edges) < num_samples:
+        logging.warning(f"Could only sample {len(negative_edges)}/{num_samples} negative edges")
+
+    # Convert to tensor
+    negative_edges_tensor = torch.tensor(negative_edges, dtype=torch.long).t()
+
+    return negative_edges_tensor
+
+
+# ============================================================================
 # Edge Masking for Training
 # ============================================================================
 
@@ -215,6 +282,9 @@ class Trainer:
 
         train_config = config['train']
 
+        # Task type (edge_regression or link_prediction)
+        self.task = train_config.get('task', 'edge_regression')
+
         # Optimizer
         self.optimizer = self._build_optimizer(train_config['optimizer'])
 
@@ -242,11 +312,15 @@ class Trainer:
         self.lab_weights = self._compute_lab_weights()
 
         logging.info("Trainer initialized")
+        logging.info(f"  Task: {self.task}")
         logging.info(f"  Optimizer: {self.optimizer.__class__.__name__}")
         logging.info(f"  Loss function: {self.loss_fn}")
         logging.info(f"  Epochs: {self.epochs}")
         logging.info(f"  Early stopping patience: {self.early_stopping_patience}")
-        logging.info(f"  Lab-wise reweighting: Enabled (variance-based)")
+        if self.task == 'edge_regression':
+            logging.info(f"  Lab-wise reweighting: Enabled (variance-based)")
+        else:
+            logging.info(f"  Classification mode: Binary link prediction")
 
     def _build_optimizer(self, optimizer_config: Dict) -> optim.Optimizer:
         """Build optimizer from config."""
@@ -355,6 +429,52 @@ class Trainer:
         # Forward pass
         self.optimizer.zero_grad()
 
+        # For link prediction, sample negative edges and combine with positives
+        if self.task == 'link_prediction':
+            # Get all existing edges in the graph
+            all_existing_edges = self.data['patient', 'has_lab', 'lab'].edge_index
+
+            # Get positive edges (supervision edges that we're training on)
+            pos_patient_indices = patient_indices[supervision_mask]
+            pos_lab_indices = lab_indices[supervision_mask]
+            num_positives = pos_patient_indices.shape[0]
+
+            # Sample negative edges (same number as positives for balanced training)
+            negative_edge_indices = sample_negative_edges(
+                self.data,
+                num_samples=num_positives,
+                existing_edges=all_existing_edges,
+                seed=None  # Different negatives each epoch
+            ).to(self.device)
+
+            # Get predictions for positive edges (label=1)
+            pos_predictions = self.model.predict_lab_values(
+                self.data,
+                pos_patient_indices,
+                pos_lab_indices
+            )
+
+            # Get predictions for negative edges (label=0)
+            neg_predictions = self.model.predict_lab_values(
+                self.data,
+                negative_edge_indices[0],
+                negative_edge_indices[1]
+            )
+
+            # Combine predictions and targets
+            all_predictions = torch.cat([pos_predictions, neg_predictions])
+            all_targets = torch.cat([
+                torch.ones_like(pos_predictions),   # Positive edges: label=1
+                torch.zeros_like(neg_predictions)   # Negative edges: label=0
+            ])
+
+            # Compute BCE loss on combined positive + negative examples
+            loss = compute_regression_loss(all_predictions, all_targets, loss_type='bce')
+            loss.backward()
+            self.optimizer.step()
+            return loss.item()
+
+        # Edge regression (original behavior)
         predictions = self.model.predict_lab_values(
             self.data,
             patient_indices,
@@ -382,7 +502,7 @@ class Trainer:
             self.optimizer.step()
             return loss.item()
 
-        # Apply weights and take mean
+        # Apply weights and take mean (for MAE/MSE)
         loss = (per_sample_loss * sample_weights).mean()
 
         # Backward pass
@@ -414,7 +534,48 @@ class Trainer:
         patient_indices = edge_indices[0]
         lab_indices = edge_indices[1]
 
-        # Forward pass
+        # For link prediction, sample negative edges and combine with positives
+        if self.task == 'link_prediction':
+            # Get all existing edges in the graph
+            all_existing_edges = self.data['patient', 'has_lab', 'lab'].edge_index
+
+            # Positive edges (validation/test edges)
+            num_positives = patient_indices.shape[0]
+
+            # Sample negative edges (same number as positives)
+            negative_edge_indices = sample_negative_edges(
+                self.data,
+                num_samples=num_positives,
+                existing_edges=all_existing_edges,
+                seed=42  # Fixed seed for consistent validation
+            ).to(self.device)
+
+            # Get predictions for positive edges (label=1)
+            pos_predictions = self.model.predict_lab_values(
+                self.data,
+                patient_indices,
+                lab_indices
+            )
+
+            # Get predictions for negative edges (label=0)
+            neg_predictions = self.model.predict_lab_values(
+                self.data,
+                negative_edge_indices[0],
+                negative_edge_indices[1]
+            )
+
+            # Combine predictions and targets
+            all_predictions = torch.cat([pos_predictions, neg_predictions])
+            all_targets = torch.cat([
+                torch.ones_like(pos_predictions),   # Positive edges: label=1
+                torch.zeros_like(neg_predictions)   # Negative edges: label=0
+            ])
+
+            # Compute BCE loss on combined positive + negative examples
+            loss = compute_regression_loss(all_predictions, all_targets, loss_type='bce')
+            return loss.item()
+
+        # Edge regression (original behavior)
         predictions = self.model.predict_lab_values(
             self.data,
             patient_indices,

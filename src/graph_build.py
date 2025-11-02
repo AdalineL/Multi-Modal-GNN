@@ -3,7 +3,7 @@ Heterogeneous Graph Construction Module
 
 This module builds a multi-modal graph from preprocessed EHR data:
 - Node types: Patient, Lab, Diagnosis, Medication
-- Edge types: patient-lab (with values), patient-diagnosis, patient-medication
+- Edge types: patient-lab (unweighted), patient-diagnosis, patient-medication (with dosage)
 - Uses PyTorch Geometric's HeteroData structure
 
 The graph structure enables GNNs to learn from:
@@ -133,12 +133,12 @@ def build_heterogeneous_graph(
         - medication: One node per medication
 
         Edge Types:
-        - (patient, has_lab, lab): Edge with continuous attribute (lab value)
+        - (patient, has_lab, lab): Unweighted edge (link prediction target)
         - (lab, has_lab_rev, patient): Reverse edges for message passing
-        - (patient, has_diagnosis, diagnosis): Binary edge
+        - (patient, has_diagnosis, diagnosis): Unweighted edge
         - (diagnosis, has_diagnosis_rev, patient): Reverse edges
-        - (patient, has_medication, medication): Binary edge
-        - (medication, has_medication_rev, patient): Reverse edges
+        - (patient, has_medication, medication): Weighted edge (dosage attribute)
+        - (medication, has_medication_rev, patient): Reverse edges with dosage
     """
     logging.info("="*70)
     logging.info("Building Heterogeneous Graph")
@@ -208,19 +208,17 @@ def build_heterogeneous_graph(
 
     edge_config = config['graph']['edge_types']
 
-    # Patient-Lab edges (with edge attributes = lab values)
+    # Patient-Lab edges (no edge attributes - link prediction only)
     if edge_config['patient_lab']['enabled']:
-        patient_lab_edges, lab_values = create_patient_lab_edges(
+        patient_lab_edges = create_patient_lab_edges(
             labs, indexers['patient'], indexers['lab']
         )
         data['patient', 'has_lab', 'lab'].edge_index = patient_lab_edges
-        data['patient', 'has_lab', 'lab'].edge_attr = lab_values
-        logging.info(f"  (patient, has_lab, lab): {patient_lab_edges.shape[1]} edges")
+        logging.info(f"  (patient, has_lab, lab): {patient_lab_edges.shape[1]} edges (unweighted)")
 
         # Reverse edges for bidirectional message passing
         if edge_config['patient_lab']['bidirectional']:
             data['lab', 'has_lab_rev', 'patient'].edge_index = patient_lab_edges.flip(0)
-            data['lab', 'has_lab_rev', 'patient'].edge_attr = lab_values
             logging.info(f"  (lab, has_lab_rev, patient): {patient_lab_edges.shape[1]} edges (reverse)")
 
     # Patient-Diagnosis edges
@@ -485,9 +483,9 @@ def create_patient_lab_edges(
     labs: pd.DataFrame,
     patient_indexer: NodeIndexer,
     lab_indexer: NodeIndexer
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> torch.Tensor:
     """
-    Create patient-lab edges with edge attributes (normalized lab values).
+    Create patient-lab edges without edge attributes (link prediction only).
 
     Args:
         labs: Lab DataFrame (SUBJECT_ID, ITEMID, VALUE_NORMALIZED)
@@ -495,17 +493,15 @@ def create_patient_lab_edges(
         lab_indexer: Lab node indexer
 
     Returns:
-        Tuple of (edge_index, edge_attr)
-        - edge_index: [2, num_edges] tensor of (patient_idx, lab_idx) pairs
-        - edge_attr: [num_edges, 1] tensor of lab values
+        edge_index: [2, num_edges] tensor of (patient_idx, lab_idx) pairs
 
     Rationale:
-        Lab values are continuous and vary in clinical meaning.
-        Storing them as edge attributes allows the GNN to weight
-        message passing by lab value magnitude.
+        For link prediction, we predict edge EXISTENCE (not lab values).
+        Lab values are not used as edge attributes because we're predicting
+        whether the edge should exist, not imputing the value.
+        Only medication dosages are used as edge weights (treatment context).
     """
     edge_list = []
-    edge_attrs = []
 
     for _, row in labs.iterrows():
         patient_idx = patient_indexer.get_index(row['SUBJECT_ID'])
@@ -513,17 +509,14 @@ def create_patient_lab_edges(
 
         if patient_idx is not None and lab_idx is not None:
             edge_list.append([patient_idx, lab_idx])
-            edge_attrs.append(row['VALUE_NORMALIZED'])
 
     if len(edge_list) == 0:
-        # No edges found, return empty tensors with correct shape
+        # No edges found, return empty tensor with correct shape
         edge_index = torch.empty((2, 0), dtype=torch.long)
-        edge_attr = torch.empty((0, 1), dtype=torch.float32)
     else:
         edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
-        edge_attr = torch.tensor(edge_attrs, dtype=torch.float32).unsqueeze(1)
 
-    return edge_index, edge_attr
+    return edge_index
 
 
 def create_patient_diagnosis_edges(

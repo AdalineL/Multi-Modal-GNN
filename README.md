@@ -80,7 +80,7 @@ This project achieves **impressive results** on lab test link prediction (predic
 4. **Heterogeneous Graph Architecture**
    - 4 node types: patient, lab, diagnosis, medication
    - 6 edge types with bidirectional message passing
-   - Edge attributes: lab values (continuous) + medication dosages (continuous)
+   - Edge attributes: medication dosages only (patient-lab edges are unweighted)
 
 ### 📊 Key Features
 
@@ -118,10 +118,10 @@ IMPORTANT: Node embeddings are pure ID lookups (no handcrafted features)
 - Lab "Glucose" (ID 5) → looks up row 5 from lab embedding table (128-dim vector)
 
 Edge Types:
-- (patient, has_lab, lab)           → Edge attribute: normalized lab value (z-score)
+- (patient, has_lab, lab)           → Unweighted (link prediction target)
 - (lab, has_lab_rev, patient)       → Reverse for bidirectional message passing
-- (patient, has_diagnosis, diagnosis)
-- (diagnosis, has_diagnosis_rev, patient)
+- (patient, has_diagnosis, diagnosis) → Unweighted
+- (diagnosis, has_diagnosis_rev, patient) → Reverse
 - (patient, has_medication, medication)  → Edge attribute: normalized dosage [0,1]
 - (medication, has_medication_rev, patient) → Edge attribute: normalized dosage [0,1]
 
